@@ -21,12 +21,13 @@
   const errorBox = document.getElementById('applicationError');
 
   // Порядок важен: по нему выбирается поле, на которое ставится фокус при ошибке.
-  const FIELDS = ['parentName', 'phone', 'childName', 'childAge', 'course', 'comment', 'consent'];
+  const FIELDS = ['parentName', 'phone', 'email', 'childName', 'childAge', 'course', 'comment', 'consent'];
 
   const MIN_NAME = 2;
   const MAX_NAME = 60;
   const MAX_COURSE = 80;
   const MAX_COMMENT = 1000;
+  const MAX_EMAIL = 120;
 
   // Диапазон списка «Возраст ребёнка» на странице. Сервер принимает шире (5–19),
   // чтобы не отклонять заявки из других источников, но родителю мы называем
@@ -151,6 +152,13 @@
     if (!rawPhone) errors.phone = 'Укажите телефон для связи.';
     else if (!normalizePhone(rawPhone)) errors.phone = 'Проверьте номер телефона: в нём должно быть от 10 до 15 цифр.';
 
+    // Email необязателен — проверяем, только если его заполнили.
+    const email = String(values.email || '').trim();
+    if (email) {
+      if (email.length > MAX_EMAIL) errors.email = `Адрес слишком длинный — не больше ${MAX_EMAIL} символов.`;
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Проверьте адрес электронной почты.';
+    }
+
     const childNameError = checkName(String(values.childName || '').trim(), 'Укажите имя ребёнка.');
     if (childNameError) errors.childName = childNameError;
 
@@ -261,6 +269,7 @@
     const payload = {
       parentName: String(values.parentName).trim(),
       phone: normalizePhone(values.phone),
+      email: String(values.email || '').trim(),
       childName: String(values.childName).trim(),
       childAge: Number.parseInt(values.childAge, 10),
       course: String(values.course).trim(),

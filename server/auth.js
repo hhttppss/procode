@@ -1,18 +1,22 @@
 'use strict';
 
 /**
- * Сессия администратора: подписанная HMAC-SHA256 cookie без внешних зависимостей.
+ * Сессия сотрудника: подписанная HMAC-SHA256 cookie без внешних зависимостей.
  * Формат cookie pc_session:  base64url(JSON payload) + "." + base64url(подпись)
- * Payload: { login, exp } — срок жизни 12 часов.
+ * Payload: { uid, login, role, exp } — срок жизни 12 часов.
+ *
+ * Роль в токене лежит только для быстрой отбраковки: настоящая проверка прав всегда
+ * идёт по свежей записи из data/users.json (attachUser). Поэтому заблокированный
+ * сотрудник теряет доступ сразу, не дожидаясь истечения cookie.
  *
  * Здесь же живут общие средства защиты по IP (createRateLimiter, getClientIp):
- * их используют и вход в админку, и публичная форма заявок.
+ * их используют и вход в систему, и публичная форма заявок.
  */
 
 const crypto = require('crypto');
 
 const config = require('./config');
-const users = require('./users');
+const users = require('./models/users');
 
 const SESSION_COOKIE = 'pc_session';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -30,7 +34,7 @@ function getClientIp(req) {
 
 /**
  * Счётчик событий по ключу (обычно IP) в скользящем окне. Живёт в памяти:
- * при перезапуске сервера сбрасывается — для одного небольшого сайта этого достаточно.
+ * при перезапуске сервера сбрасывается — для одной небольшой школы этого достаточно.
  */
 function createRateLimiter({ limit, windowMs, sweepMs = 60 * 1000 }) {
   const hits = new Map();
@@ -93,8 +97,8 @@ function sign(encodedPayload) {
   return crypto.createHmac('sha256', config.sessionSecret).update(encodedPayload).digest('base64url');
 }
 
-function createToken(login) {
-  const payload = { login, exp: Date.now() + SESSION_TTL_MS };
+function createToken(user) {
+  const payload = { uid: user.id, login: user.login, role: user.role, exp: Date.now() + SESSION_TTL_MS };
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
   return `${encoded}.${sign(encoded)}`;
 }
@@ -113,10 +117,8 @@ function readToken(token) {
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
-    if (!payload || typeof payload.login !== 'string' || typeof payload.exp !== 'number') return null;
-    if (payload.exp <= Date.now()) return null;
-    // Учётную запись удалили или переименовали — старые сессии сразу перестают действовать.
-    if (!isKnownLogin(payload.login)) return null;
+    if (!payload || typeof payload.exp !== 'number' || payload.exp <= Date.now()) return null;
+    if (typeof payload.login !== 'string' && typeof payload.uid !== 'string') return null;
     return payload;
   } catch {
     return null;
@@ -152,53 +154,70 @@ function isSecureRequest(req) {
 }
 
 function buildCookie(value, maxAgeSeconds, req) {
-  const parts = [
-    `${SESSION_COOKIE}=${value}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${maxAgeSeconds}`,
-  ];
+  const parts = [`${SESSION_COOKIE}=${value}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${maxAgeSeconds}`];
   if (isSecureRequest(req)) parts.push('Secure');
   return parts.join('; ');
 }
 
-function setSession(req, res, login) {
-  res.setHeader('Set-Cookie', buildCookie(createToken(login), Math.floor(SESSION_TTL_MS / 1000), req));
+function setSession(req, res, user) {
+  res.setHeader('Set-Cookie', buildCookie(createToken(user), Math.floor(SESSION_TTL_MS / 1000), req));
 }
 
 function clearSession(req, res) {
   res.setHeader('Set-Cookie', buildCookie('', 0, req));
 }
 
-function getSession(req) {
-  if (req.pcSession !== undefined) return req.pcSession;
-
-  const cookies = parseCookies(req.headers.cookie);
-  req.pcSession = readToken(cookies[SESSION_COOKIE]);
-  return req.pcSession;
-}
-
 // --------------------------------------------------------------- вход/выход
-
-/** Есть ли такая учётная запись — из файла пользователей либо из .env, если файл пуст. */
-function isKnownLogin(login) {
-  if (users.isEmpty()) return login === config.adminLogin;
-  return users.exists(login);
-}
 
 /**
  * Проверяет логин и пароль.
- * @returns {string|null} логин в каноническом виде (как записан) либо null.
+ * @returns {Promise<{ok: true, user: object} | {ok: false, reason: string}>}
  */
-function checkCredentials(login, password) {
-  if (!users.isEmpty()) return users.verify(login, password);
+async function checkCredentials(login, password) {
+  if (!(await users.isEmpty())) {
+    const user = await users.verify(login, password);
+    if (!user) return { ok: false, reason: 'credentials' };
+    if (!user.active) return { ok: false, reason: 'blocked' };
+    return { ok: true, user };
+  }
 
-  // Запасной путь: пользователей ещё не завели, работает единственный админ из .env.
+  // Запасной путь: сотрудников ещё не завели, работает единственный админ из .env.
   // Оба сравнения выполняются всегда — время ответа не зависит от того, что именно неверно.
   const loginOk = safeCompare(typeof login === 'string' ? login : '', config.adminLogin);
   const passwordOk = safeCompare(typeof password === 'string' ? password : '', config.adminPassword);
-  return loginOk && passwordOk ? config.adminLogin : null;
+  if (!loginOk || !passwordOk) return { ok: false, reason: 'credentials' };
+
+  return {
+    ok: true,
+    user: {
+      id: 'env-admin',
+      login: config.adminLogin,
+      role: 'admin',
+      name: config.adminLogin,
+      active: true,
+      fromEnv: true,
+    },
+  };
+}
+
+/** Учётка из .env: существует, пока data/users.json пуст. */
+function envAdmin() {
+  return {
+    id: 'env-admin',
+    login: config.adminLogin,
+    role: 'admin',
+    name: config.adminLogin,
+    phone: '',
+    email: '',
+    courses: [],
+    rate: 0,
+    active: true,
+    note: '',
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+    lastLoginAt: null,
+    fromEnv: true,
+  };
 }
 
 function isLoginBlocked(req) {
@@ -215,14 +234,79 @@ function registerLoginSuccess(req) {
 
 // ------------------------------------------------------------- middleware
 
+/**
+ * Кладёт в req.user актуальную запись сотрудника (или null).
+ * Ставится один раз в начале цепочки — дальше все проверки прав синхронные.
+ */
+async function attachUser(req, res, next) {
+  try {
+    req.user = null;
+
+    const payload = readToken(parseCookies(req.headers.cookie)[SESSION_COOKIE]);
+    if (!payload) return next();
+
+    // Учётка из .env действует, только пока не заведён ни один сотрудник.
+    if (payload.uid === 'env-admin') {
+      if (await users.isEmpty()) req.user = envAdmin();
+      return next();
+    }
+
+    // По идентификатору — основной путь; по логину — для сессий, выданных до обновления.
+    const user = (payload.uid ? await users.getById(payload.uid) : null) || (await users.getByLogin(payload.login));
+
+    // Учётку удалили или заблокировали — сессия перестаёт действовать немедленно.
+    if (user && user.active) req.user = user;
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+function loginRedirect(req, res) {
+  const target = req.originalUrl && req.originalUrl.startsWith('/app') ? req.originalUrl : '';
+  const suffix = target ? `?next=${encodeURIComponent(target)}` : '';
+  return res.redirect(`/login${suffix}`);
+}
+
 function requirePage(req, res, next) {
-  if (getSession(req)) return next();
-  return res.redirect('/admin/login');
+  if (req.user) return next();
+  return loginRedirect(req, res);
 }
 
 function requireApi(req, res, next) {
-  if (getSession(req)) return next();
-  return res.status(401).json({ ok: false, message: 'Нужно войти в админ-панель.' });
+  if (req.user) return next();
+  return res.status(401).json({ ok: false, message: 'Нужно войти в систему.' });
+}
+
+function requireAdminApi(req, res, next) {
+  if (!req.user) return res.status(401).json({ ok: false, message: 'Нужно войти в систему.' });
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ ok: false, message: 'Раздел доступен только администратору.' });
+  }
+  return next();
+}
+
+/**
+ * Защита от подделки запросов с чужого сайта.
+ * SameSite=Lax уже отсекает межсайтовые POST из форм; здесь добавлена проверка Origin
+ * для случаев, когда запрос всё же долетел (старый браузер, редирект).
+ */
+function sameOrigin(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  const origin = req.headers.origin;
+  if (!origin) return next(); // curl и серверные вызовы заголовок не шлют
+
+  let host;
+  try {
+    host = new URL(origin).host;
+  } catch {
+    host = '';
+  }
+
+  if (host && host === req.headers.host) return next();
+  return res.status(403).json({ ok: false, message: 'Запрос отклонён: неизвестный источник.' });
 }
 
 module.exports = {
@@ -235,12 +319,14 @@ module.exports = {
   parseCookies,
   setSession,
   clearSession,
-  getSession,
   checkCredentials,
-  isKnownLogin,
+  envAdmin,
   isLoginBlocked,
   registerLoginFailure,
   registerLoginSuccess,
+  attachUser,
   requirePage,
   requireApi,
+  requireAdminApi,
+  sameOrigin,
 };

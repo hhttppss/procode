@@ -66,6 +66,13 @@
   .tnum {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Атрибут hidden должен побеждать классы вроде .btn, задающие display.
+     Без этого скрытая через hidden кнопка с классом .btn остаётся видимой:
+     правило .btn { display: inline-flex } специфичнее браузерного [hidden]. */
+  [hidden] {
+    display: none !important;
+  }
 }
 
 @layer components {
@@ -236,28 +243,30 @@
     @apply h-1.5 w-1.5 rounded-full bg-current;
   }
 
-  .status-new {
+  /* Цвет статуса задаётся «тоном», а не именем статуса: справочники в
+     server/domain/catalog.js хранят tone, поэтому новый статус не требует нового класса. */
+  .status-cobalt {
     @apply border-cobalt/25 bg-cobalt-100 text-cobalt-700;
   }
 
-  .status-agreed {
+  .status-mint {
     @apply border-mint/30 bg-mint-100 text-mint-600;
   }
 
-  .status-refused {
-    @apply border-red-200 bg-red-50 text-red-600;
-  }
-
-  .status-thinking {
+  .status-apricot {
     @apply border-apricot/40 bg-apricot-100 text-apricot-600;
   }
 
-  .status-noanswer {
-    @apply border-ink/15 bg-mist text-muted;
+  .status-red {
+    @apply border-red-200 bg-red-50 text-red-600;
   }
 
-  .status-callback {
+  .status-violet {
     @apply border-violet-200 bg-violet-50 text-violet-700;
+  }
+
+  .status-slate {
+    @apply border-ink/15 bg-mist text-muted;
   }
 
   /* ---------- Появление при скролле ---------- */
@@ -429,6 +438,7 @@
   .tok-kw {
     @apply text-cobalt-400;
   }
+
   .tok-str {
     @apply text-mint-400;
   }
@@ -443,5 +453,197 @@
   }
   .tok-pun {
     @apply text-white/45;
+  }
+}
+
+/* ===== Внутренняя платформа (/app): оболочка и таблицы ===== */
+
+@layer components {
+  /* ---------- Доступность ---------- */
+  .skip-link {
+    @apply absolute left-4 top-4 z-[80] -translate-y-24 rounded-xl bg-ink px-4 py-2.5
+           text-sm font-semibold text-white transition-transform focus:translate-y-0;
+  }
+
+  /* ---------- Боковое меню ---------- */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
+           text-white/60 transition hover:bg-white/5 hover:text-white;
+  }
+
+  .nav-item-active {
+    @apply bg-cobalt/20 text-white shadow-[inset_0_0_0_1px_rgba(123,147,255,0.25)];
+  }
+
+  .nav-badge {
+    @apply min-w-[1.375rem] rounded-full bg-apricot px-1.5 text-center font-mono
+           text-[11px] font-semibold leading-5 text-ink;
+  }
+
+  .avatar {
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-cobalt/25
+           font-display text-xs font-semibold text-white;
+  }
+
+  /* ---------- Плитки показателей ---------- */
+  .tile {
+    @apply min-w-0 rounded-2xl border border-ink/[0.07] bg-white p-4 shadow-card transition duration-200 sm:p-5;
+  }
+
+  .tile-clickable {
+    @apply text-left hover:-translate-y-0.5 hover:border-cobalt/25 hover:shadow-lift;
+  }
+
+  .tile-label {
+    @apply text-2xs font-medium uppercase tracking-wider text-muted;
+  }
+
+  .tile-value {
+    @apply mt-2 block font-display text-2xl font-semibold tnum sm:text-3xl;
+  }
+
+  .tile-hint {
+    @apply mt-1 block text-xs text-muted;
+  }
+
+  /* ---------- Панели и заголовки блоков ---------- */
+  /* min-w-0 обязателен: панель часто лежит в grid или flex, а там элемент по умолчанию
+     не может стать уже своего содержимого — и широкая таблица растягивает всю страницу
+     вместо того, чтобы прокручиваться внутри .table-scroll. */
+  .panel {
+    @apply min-w-0 rounded-2xl border border-ink/[0.07] bg-white shadow-card;
+  }
+
+  .panel-head {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-ink/[0.07] px-4 py-3.5 sm:px-5;
+  }
+
+  .panel-title {
+    @apply font-display text-base font-semibold tracking-tight;
+  }
+
+  .panel-body {
+    @apply p-4 sm:p-5;
+  }
+
+  /* ---------- Таблицы ---------- */
+  .table-scroll {
+    @apply min-w-0 overflow-x-auto;
+  }
+
+  .data-table {
+    @apply w-full min-w-[40rem] border-collapse text-left text-sm;
+  }
+
+  .data-table thead tr {
+    @apply border-b border-ink/10 bg-mist/60 text-2xs uppercase tracking-wider text-muted;
+  }
+
+  .data-table th {
+    @apply whitespace-nowrap px-4 py-3 font-semibold;
+  }
+
+  .data-table tbody tr {
+    @apply border-b border-ink/[0.06] transition last:border-0 hover:bg-mist/50;
+  }
+
+  .data-table td {
+    @apply px-4 py-3 align-middle;
+  }
+
+  .row-clickable {
+    @apply cursor-pointer;
+  }
+
+  /* ---------- Мелкие элементы интерфейса ---------- */
+  .kv-label {
+    @apply text-2xs uppercase tracking-wider text-muted;
+  }
+
+  .kv-value {
+    @apply mt-1 text-sm;
+  }
+
+  .btn-danger {
+    @apply border border-red-200 bg-white text-red-600 hover:border-red-300 hover:bg-red-50;
+  }
+
+  .link-inline {
+    @apply text-cobalt underline-offset-4 transition hover:underline;
+  }
+
+  .field-hint {
+    @apply mt-1.5 text-xs text-muted;
+  }
+
+  .segmented {
+    @apply inline-flex rounded-xl border border-ink/10 bg-white p-1;
+  }
+
+  .segmented-item {
+    @apply rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition hover:text-ink;
+  }
+
+  .segmented-item[aria-pressed='true'] {
+    @apply bg-ink text-white;
+  }
+
+  .empty-block {
+    @apply rounded-2xl border border-dashed border-ink/15 bg-white/60 px-6 py-10 text-center;
+  }
+
+  /* ---------- Модальное окно ---------- */
+  .modal-backdrop {
+    @apply fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-6;
+  }
+
+  .modal-panel {
+    @apply flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-paper shadow-lift sm:rounded-3xl;
+  }
+
+  .modal-head {
+    @apply flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4 sm:px-6;
+  }
+
+  .modal-body {
+    @apply flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6;
+  }
+
+  .modal-foot {
+    @apply flex flex-wrap items-center gap-2 border-t border-ink/10 bg-white px-5 py-4 sm:px-6;
+  }
+
+  .icon-button {
+    @apply rounded-full border border-ink/10 p-2 text-muted transition hover:bg-ink/5 hover:text-ink;
+  }
+
+  /* ---------- Календарь ---------- */
+  .cal-head {
+    @apply px-2 py-2 text-center text-2xs font-semibold uppercase tracking-wider text-muted;
+  }
+
+  .cal-day {
+    @apply min-h-[6.5rem] rounded-xl border border-ink/[0.06] bg-white p-1.5 transition hover:border-cobalt/25;
+  }
+
+  .cal-day-muted {
+    @apply bg-mist/40 text-muted;
+  }
+
+  .cal-day-today {
+    @apply border-cobalt/40 ring-1 ring-cobalt/20;
+  }
+
+  .cal-event {
+    @apply block w-full truncate rounded-lg px-1.5 py-1 text-left text-[11px] font-medium leading-tight transition hover:opacity-80;
+  }
+
+  /* ---------- Уведомления ---------- */
+  .bell-item {
+    @apply flex w-full gap-3 px-4 py-3 text-left transition hover:bg-mist/60;
+  }
+
+  .bell-unread {
+    @apply bg-cobalt-100/40;
   }
 }

@@ -9,6 +9,9 @@ node_modules/
 # Runtime data (applications, users, corrupt-file backups)
 data/*.json
 
+# Локальная инструкция с паролями учётных записей
+ЗАПУСК.md
+
 # Logs
 *.log
 npm-debug.log*

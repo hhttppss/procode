@@ -1,0 +1,45 @@
+<!-- Расписание. Администратор правит календарь, преподаватель видит только свои занятия -->
+<section class="space-y-5">
+  <div class="panel p-4 sm:p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <button type="button" id="prevPeriod" class="icon-button" aria-label="Предыдущий период">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <button type="button" id="todayButton" class="btn btn-outline btn-sm">Сегодня</button>
+        <button type="button" id="nextPeriod" class="icon-button" aria-label="Следующий период">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+        <p id="periodTitle" class="ml-1 font-display text-base font-semibold tracking-tight"></p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="segmented" role="group" aria-label="Вид календаря">
+          <button type="button" class="segmented-item" data-view="day">День</button>
+          <button type="button" class="segmented-item" data-view="week" aria-pressed="true">Неделя</button>
+          <button type="button" class="segmented-item" data-view="month" data-admin-only hidden>Месяц</button>
+        </div>
+        <button type="button" id="addLesson" class="btn btn-primary btn-sm" data-admin-only hidden>Новое занятие</button>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-3" data-admin-only hidden>
+      <label class="field" for="filterTeacher">
+        <span class="field-label">Преподаватель</span>
+        <select id="filterTeacher" class="field-input"></select>
+      </label>
+      <label class="field" for="filterStudent">
+        <span class="field-label">Ученик</span>
+        <select id="filterStudent" class="field-input"></select>
+      </label>
+      <label class="field" for="filterStatus">
+        <span class="field-label">Статус</span>
+        <select id="filterStatus" class="field-input"></select>
+      </label>
+    </div>
+  </div>
+
+  <div id="calendar" class="panel p-3 sm:p-4"></div>
+
+  <div id="stateBox"></div>
+</section>

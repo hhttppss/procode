@@ -1,17 +1,16 @@
 'use strict';
 
 /**
- * Точка входа: лендинг «ПроКод», публичный API заявок и админ-панель.
+ * Точка входа: лендинг «ПроКод», публичный API заявок и внутренняя платформа /app.
  * Запуск: npm start (или node server/index.js).
  */
 
 const express = require('express');
 const path = require('path');
 
+const auth = require('./auth');
 const config = require('./config');
-const store = require('./store');
-const adminRoutes = require('./routes/admin');
-const publicRoutes = require('./routes/public');
+const models = require('./models');
 
 const PUBLIC_DIR = path.join(config.rootDir, 'public');
 const INDEX_FILE = path.join(PUBLIC_DIR, 'index.html');
@@ -26,9 +25,9 @@ app.set('trust proxy', config.trustProxy);
  * Политика безопасности контента.
  *
  * 'unsafe-inline' в script-src нужен из-за инлайновых блоков на страницах:
- * микроразметки JSON-LD в index.html и списка статусов, который сервер
- * подставляет в админку. Убрать его можно, только перейдя на nonce, а для
- * этого index.html придётся отдавать через шаблонизатор, а не как статический файл.
+ * микроразметки JSON-LD в index.html и данных сессии, которые сервер подставляет
+ * в страницы платформы. Убрать его можно, только перейдя на nonce, а для этого
+ * index.html придётся отдавать через шаблонизатор, а не как статический файл.
  * Даже в таком виде политика запрещает загрузку скриптов и стилей с чужих доменов,
  * подмену <base> и встраивание сайта в чужой фрейм.
  */
@@ -53,7 +52,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '64kb' }));
 
 // Наружу отдаётся только public/: data/, server/ и src/ остаются недоступны.
 app.use(
@@ -74,13 +73,25 @@ app.get('/', (req, res, next) => {
   });
 });
 
-app.use('/api', publicRoutes);
-app.use('/admin', adminRoutes);
+// Публичный API лендинга — без сессии.
+app.use('/api', require('./routes/public'));
+
+// Дальше идёт всё, что связано с сотрудниками: сначала определяем, кто пришёл.
+app.use(auth.attachUser);
+app.use(auth.sameOrigin);
+
+app.use('/', require('./routes/auth'));
+app.use('/app/api', require('./routes/api'));
+app.use('/app', require('./routes/pages'));
+
+// Адреса первой версии проекта продолжают работать: старые закладки не ломаются.
+app.get('/admin', (req, res) => res.redirect(301, '/app'));
+app.get('/admin/login', (req, res) => res.redirect(301, '/login'));
 
 // -------------------------------------------------------------- 404 и ошибки
 
 function isApiRequest(req) {
-  return req.path.startsWith('/api/') || req.path.startsWith('/admin/api/');
+  return req.path.startsWith('/api/') || req.path.startsWith('/app/api/');
 }
 
 function htmlPage({ title, heading, text, link }) {
@@ -108,8 +119,8 @@ function landingPlaceholder() {
   return htmlPage({
     title: 'Лендинг ещё не собран',
     heading: 'Страница сайта пока не готова',
-    text: 'Файл public/index.html не найден. Админ-панель уже работает — заявки принимаются и сохраняются.',
-    link: { href: '/admin', label: 'Открыть админ-панель' },
+    text: 'Файл public/index.html не найден. Платформа уже работает — заявки принимаются и сохраняются.',
+    link: { href: '/app', label: 'Открыть платформу' },
   });
 }
 
@@ -165,16 +176,17 @@ app.use((error, req, res, next) => {
 // ------------------------------------------------------------------- запуск
 
 async function start() {
-  await store.init();
+  await models.init();
 
   const server = app.listen(config.port, () => {
     const base = `http://localhost:${config.port}`;
 
     console.log('');
     console.log('  ПроКод — сервер запущен');
-    console.log(`  Лендинг:      ${base}/`);
-    console.log(`  Админ-панель: ${base}/admin  (логин: ${config.adminLogin})`);
-    console.log('  Стили:        npm run css — пересобрать CSS после правок разметки');
+    console.log(`  Лендинг:    ${base}/`);
+    console.log(`  Платформа:  ${base}/app`);
+    console.log(`  Вход:       ${base}/login`);
+    console.log('  Стили:      npm run css — пересобрать CSS после правок разметки');
     console.log('');
 
     config.printWarnings();

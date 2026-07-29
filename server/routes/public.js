@@ -13,8 +13,9 @@
 
 const express = require('express');
 
+const applications = require('../models/applications');
 const { createRateLimiter, getClientIp } = require('../auth');
-const store = require('../store');
+const notify = require('../domain/notify');
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ const MAX_NAME = 60;
 const MIN_NAME = 2;
 const MAX_COURSE = 80;
 const MAX_COMMENT = 1000;
+const MAX_EMAIL = 120;
 const MIN_AGE = 5;
 const MAX_AGE = 19;
 
@@ -95,6 +97,13 @@ function validateApplication(body) {
   if (!course) errors.course = 'Выберите направление обучения.';
   else if (course.length > MAX_COURSE) errors.course = 'Слишком длинное название направления.';
 
+  // Email необязателен: телефона достаточно, но если его указали — проверим форму записи.
+  const email = rawText(body.email);
+  if (email) {
+    if (email.length > MAX_EMAIL) errors.email = `Адрес слишком длинный — не больше ${MAX_EMAIL} символов.`;
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Проверьте адрес электронной почты.';
+  }
+
   const comment = rawText(body.comment);
   if (comment.length > MAX_COMMENT) {
     errors.comment = `Комментарий слишком длинный — не больше ${MAX_COMMENT} символов.`;
@@ -106,7 +115,7 @@ function validateApplication(body) {
 
   return {
     errors,
-    value: { parentName, phone, childName, childAge, course, comment },
+    value: { parentName, phone, email, childName, childAge, course, comment },
   };
 }
 
@@ -146,8 +155,13 @@ router.post('/applications', async (req, res, next) => {
     // успели бы пройти проверку раньше, чем счётчик увеличится.
     submitLimiter.hit(ip);
 
-    const record = await store.create({ ...value, source: 'landing' });
+    const record = await applications.create({ ...value, source: 'landing' });
     logApplication(record);
+
+    // Уведомление администраторам не должно задерживать ответ родителю и тем более его ломать.
+    notify
+      .newApplication(record)
+      .catch((error) => console.error('Не удалось создать уведомление о заявке:', error.message));
 
     return res.status(201).json({ ok: true, id: record.id });
   } catch (error) {

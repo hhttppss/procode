@@ -1,0 +1,17 @@
+<!-- Главная. Разметка одна на обе роли: набор блоков подставляет js/crm/dashboard.js -->
+<section class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="segmented" role="group" aria-label="Период">
+      <button type="button" class="segmented-item" data-period="week">Неделя</button>
+      <button type="button" class="segmented-item" data-period="month" aria-pressed="true">Месяц</button>
+      <button type="button" class="segmented-item" data-period="quarter">3 месяца</button>
+      <button type="button" class="segmented-item" data-period="year">Год</button>
+    </div>
+    <p id="periodLabel" class="font-mono text-xs text-muted tnum"></p>
+  </div>
+
+  <div id="tiles" class="grid grid-cols-2 gap-3 lg:grid-cols-4"></div>
+
+  <!-- items-start: панели занимают высоту по содержимому, а не растягиваются под соседнюю -->
+  <div id="panels" class="grid items-start gap-4 lg:grid-cols-2"></div>
+</section>

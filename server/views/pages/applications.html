@@ -1,0 +1,64 @@
+<!-- Заявки с сайта. Модуль доступен только администратору (см. server/routes/api/index.js) -->
+<section class="space-y-5">
+  <div id="statusTiles" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"></div>
+
+  <form id="filters" class="panel p-4 sm:p-5" role="search">
+    <div class="grid gap-3 lg:grid-cols-12">
+      <div class="lg:col-span-4">
+        <label class="field" for="filterSearch">
+          <span class="field-label">Поиск</span>
+          <input id="filterSearch" name="q" type="search" class="field-input" placeholder="Имя, телефон, направление…" autocomplete="off" />
+        </label>
+      </div>
+      <div class="lg:col-span-3">
+        <label class="field" for="filterStatus">
+          <span class="field-label">Статус</span>
+          <select id="filterStatus" name="status" class="field-input"></select>
+        </label>
+      </div>
+      <div class="lg:col-span-2">
+        <label class="field" for="filterFrom">
+          <span class="field-label">С</span>
+          <input id="filterFrom" name="from" type="date" class="field-input" />
+        </label>
+      </div>
+      <div class="lg:col-span-2">
+        <label class="field" for="filterTo">
+          <span class="field-label">По</span>
+          <input id="filterTo" name="to" type="date" class="field-input" />
+        </label>
+      </div>
+      <div class="lg:col-span-1 flex items-end">
+        <button type="button" id="resetFilters" class="btn btn-outline btn-sm w-full">Сброс</button>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <p id="resultSummary" class="text-sm text-muted" aria-live="polite"></p>
+      <a id="exportCsv" class="btn btn-outline btn-sm" href="/app/api/applications/export/csv" download>Выгрузить CSV</a>
+    </div>
+  </form>
+
+  <div id="listPanel" class="panel">
+    <div class="table-scroll hidden lg:block">
+      <table class="data-table">
+        <caption class="sr-only">Список заявок с сайта</caption>
+        <thead>
+          <tr>
+            <th scope="col">Дата</th>
+            <th scope="col">Родитель</th>
+            <th scope="col">Телефон</th>
+            <th scope="col">Ребёнок</th>
+            <th scope="col">Направление</th>
+            <th scope="col">Статус</th>
+            <th scope="col" class="text-right">Действие</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="cards" class="space-y-3 p-4 lg:hidden"></div>
+  </div>
+
+  <div id="stateBox"></div>
+</section>

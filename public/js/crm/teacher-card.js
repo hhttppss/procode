@@ -1,0 +1,298 @@
+'use strict';
+
+/**
+ * Карточка преподавателя: профиль, ставка, ученики, статистика занятий
+ * и предварительный расчёт начисления за период.
+ */
+
+import './shell.js';
+import {
+  CATALOG,
+  PC,
+  api,
+  byId,
+  clear,
+  emptyBlock,
+  endOfMonth,
+  formatAge,
+  formatDateTime,
+  formatDay,
+  formatMoney,
+  h,
+  kv,
+  startOfMonth,
+  statusBadge,
+  todayDay,
+  toast,
+} from './core.js';
+import { openPasswordForm, openTeacherForm } from './teacher-form.js';
+
+const STUDENT_STATUSES = CATALOG.studentStatuses || [];
+const LESSON_STATUSES = CATALOG.lessonStatuses || [];
+
+const root = byId('cardRoot');
+const stateBox = byId('stateBox');
+
+const period = { from: startOfMonth(todayDay()), to: endOfMonth(todayDay()) };
+let data = null;
+
+function panel(title, body, actions = null) {
+  return h('div', { class: 'panel' }, [
+    h('div', { class: 'panel-head' }, [h('h2', { class: 'panel-title', text: title }), actions]),
+    h('div', { class: 'panel-body' }, body),
+  ]);
+}
+
+function tile(label, value, hint) {
+  return h('div', { class: 'tile' }, [
+    h('span', { class: 'tile-label', text: label }),
+    h('span', { class: 'tile-value', text: String(value) }),
+    hint ? h('span', { class: 'tile-hint', text: hint }) : null,
+  ]);
+}
+
+function header(teacher) {
+  return h('div', { class: 'panel p-5 sm:p-6' }, [
+    h('div', { class: 'flex flex-wrap items-start justify-between gap-4' }, [
+      h('div', { class: 'min-w-0' }, [
+        h('div', { class: 'flex flex-wrap items-center gap-3' }, [
+          h('h2', { class: 'font-display text-2xl font-semibold tracking-tight', text: teacher.name }),
+          h('span', {
+            class: teacher.active ? 'status status-mint' : 'status status-red',
+            text: teacher.active ? 'Доступ открыт' : 'Заблокирован',
+          }),
+        ]),
+        h('p', { class: 'mt-1.5 font-mono text-sm text-muted', text: teacher.login }),
+      ]),
+      h('div', { class: 'flex flex-wrap gap-2' }, [
+        h('button', {
+          class: 'btn btn-primary btn-sm',
+          attrs: { type: 'button' },
+          text: 'Редактировать',
+          on: {
+            click: () =>
+              openTeacherForm({
+                teacher,
+                onSaved: async () => {
+                  toast('Данные сотрудника обновлены');
+                  await load();
+                },
+              }),
+          },
+        }),
+        h('button', {
+          class: 'btn btn-outline btn-sm',
+          attrs: { type: 'button' },
+          text: 'Сменить пароль',
+          on: { click: () => openPasswordForm(teacher, load) },
+        }),
+        h('button', {
+          class: 'btn btn-outline btn-sm',
+          attrs: { type: 'button' },
+          text: teacher.active ? 'Заблокировать' : 'Разблокировать',
+          on: { click: () => toggleAccess(teacher) },
+        }),
+        h('button', {
+          class: 'btn btn-sm btn-danger',
+          attrs: { type: 'button' },
+          text: 'Удалить',
+          on: { click: () => removeTeacher(teacher) },
+        }),
+      ]),
+    ]),
+  ]);
+}
+
+function profileBlock(teacher) {
+  return panel(
+    'Профиль',
+    h('dl', { class: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' }, [
+      kv('Роль', teacher.role === 'admin' ? 'Администратор' : 'Преподаватель'),
+      h('div', {}, [
+        h('dt', { class: 'kv-label', text: 'Телефон' }),
+        h(
+          'dd',
+          { class: 'kv-value' },
+          teacher.phone
+            ? h('a', { class: 'link-inline font-mono tnum', attrs: { href: `tel:${teacher.phone.replace(/[^\d+]/g, '')}` }, text: teacher.phone })
+            : document.createTextNode('—')
+        ),
+      ]),
+      h('div', {}, [
+        h('dt', { class: 'kv-label', text: 'Email' }),
+        h(
+          'dd',
+          { class: 'kv-value' },
+          teacher.email
+            ? h('a', { class: 'link-inline', attrs: { href: `mailto:${teacher.email}` }, text: teacher.email })
+            : document.createTextNode('—')
+        ),
+      ]),
+      kv('Ставка за занятие', teacher.rate ? formatMoney(teacher.rate) : 'не задана'),
+      kv('Последний вход', teacher.lastLoginAt ? formatDateTime(teacher.lastLoginAt) : 'ещё не входил', { mono: true }),
+      kv('Учётка создана', formatDateTime(teacher.createdAt), { mono: true }),
+      h('div', { class: 'sm:col-span-2 lg:col-span-3' }, [
+        h('dt', { class: 'kv-label', text: 'Направления' }),
+        h('dd', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, (teacher.courses || []).length === 0
+          ? h('span', { class: 'text-sm text-muted', text: '—' })
+          : teacher.courses.map((course) => h('span', { class: 'chip', text: course }))),
+      ]),
+      teacher.note
+        ? h('div', { class: 'sm:col-span-2 lg:col-span-3' }, [
+            h('dt', { class: 'kv-label', text: 'Заметка' }),
+            h('dd', { class: 'mt-1 whitespace-pre-line rounded-xl bg-mist/70 px-4 py-3 text-sm', text: teacher.note }),
+          ])
+        : null,
+    ].filter(Boolean))
+  );
+}
+
+function statsBlock(stats, payroll) {
+  const tiles = h('div', { class: 'grid grid-cols-2 gap-3 lg:grid-cols-4' }, [
+    tile('Проведено всего', stats.done),
+    tile('Проведено за период', stats.period.done, `${formatDay(period.from)} — ${formatDay(period.to)}`),
+    tile('Запланировано', stats.planned),
+    tile('Отменено за период', stats.period.cancelled),
+  ]);
+
+  const payrollBox = h('div', { class: 'mt-4 rounded-2xl border border-cobalt/20 bg-cobalt-100/40 p-4' }, [
+    h('p', { class: 'kv-label', text: 'Расчёт начисления за период' }),
+    h('p', { class: 'mt-1.5 font-display text-2xl font-semibold', text: formatMoney(payroll.amount) }),
+    h('p', {
+      class: 'mt-1 text-sm text-muted',
+      text: `${payroll.lessons} ${payroll.lessons === 1 ? 'занятие' : 'занятий'} × ${formatMoney(payroll.rate)}`,
+    }),
+    h('a', { class: 'btn btn-outline btn-sm mt-3', attrs: { href: '/app/finance' }, text: 'Начислить в финансах' }),
+  ]);
+
+  return panel('Статистика занятий', [tiles, payrollBox]);
+}
+
+function studentsBlock(students) {
+  const body =
+    students.length === 0
+      ? h('p', { class: 'text-sm text-muted', text: 'За преподавателем пока никто не закреплён.' })
+      : h('div', { class: 'table-scroll' }, [
+          h('table', { class: 'data-table min-w-[32rem]' }, [
+            h('thead', {}, h('tr', {}, [
+              h('th', { attrs: { scope: 'col' }, text: 'Имя' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Возраст' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Направление' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
+            ])),
+            h(
+              'tbody',
+              {},
+              students.map((student) =>
+                h(
+                  'tr',
+                  {
+                    class: 'row-clickable',
+                    on: { click: () => (window.location.href = `/app/students/${student.id}`) },
+                  },
+                  [
+                    h('td', { class: 'font-medium', text: student.name }),
+                    h('td', { class: 'text-muted tnum', text: formatAge(student.age) || '—' }),
+                    h('td', { class: 'text-muted', text: student.course || '—' }),
+                    h('td', {}, statusBadge(STUDENT_STATUSES, student.status)),
+                  ]
+                )
+              )
+            ),
+          ]),
+        ]);
+
+  return panel(`Ученики (${students.length})`, body);
+}
+
+function lessonsBlock(lessons) {
+  const body =
+    lessons.length === 0
+      ? h('p', { class: 'text-sm text-muted', text: 'Занятий пока не было.' })
+      : h('div', { class: 'table-scroll' }, [
+          h('table', { class: 'data-table min-w-[30rem]' }, [
+            h('thead', {}, h('tr', {}, [
+              h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Время' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
+              h('th', { attrs: { scope: 'col' }, text: 'Комментарий' }),
+            ])),
+            h(
+              'tbody',
+              {},
+              lessons.map((lesson) =>
+                h('tr', {}, [
+                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs', text: formatDay(lesson.date) }),
+                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs text-muted', text: lesson.startTime }),
+                  h('td', {}, statusBadge(LESSON_STATUSES, lesson.status)),
+                  h('td', { class: 'max-w-[18rem] truncate text-sm text-muted', text: lesson.teacherComment || '—' }),
+                ])
+              )
+            ),
+          ]),
+        ]);
+
+  const link = h('a', {
+    class: 'btn btn-outline btn-sm',
+    attrs: { href: `/app/schedule?teacherId=${encodeURIComponent(PC.teacherId)}` },
+    text: 'В расписании',
+  });
+
+  return panel('Последние занятия', body, link);
+}
+
+// ------------------------------------------------------------------ действия
+
+async function toggleAccess(teacher) {
+  const next = !teacher.active;
+  const question = next
+    ? `Открыть доступ сотруднику «${teacher.name}»?`
+    : `Заблокировать доступ сотруднику «${teacher.name}»? Он сразу выйдет из системы.`;
+  if (!window.confirm(question)) return;
+
+  try {
+    await api(`/teachers/${encodeURIComponent(teacher.id)}`, { method: 'PATCH', body: { active: next } });
+    toast(next ? 'Доступ открыт' : 'Доступ заблокирован');
+    await load();
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+
+async function removeTeacher(teacher) {
+  if (!window.confirm(`Удалить учётную запись «${teacher.name}»? Ученики останутся, но потеряют закрепление.`)) return;
+
+  try {
+    await api(`/teachers/${encodeURIComponent(teacher.id)}`, { method: 'DELETE' });
+    toast('Учётная запись удалена');
+    window.location.href = '/app/teachers';
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+
+// ------------------------------------------------------------------- сборка
+
+function render() {
+  root.replaceChildren(
+    header(data.item),
+    profileBlock(data.item),
+    statsBlock(data.stats, data.payroll),
+    studentsBlock(data.students || []),
+    lessonsBlock(data.recentLessons || [])
+  );
+}
+
+async function load() {
+  clear(stateBox);
+
+  try {
+    data = await api(`/teachers/${encodeURIComponent(PC.teacherId)}`, { query: period });
+    render();
+  } catch (error) {
+    clear(root);
+    stateBox.append(emptyBlock('Не удалось открыть карточку', error.message));
+  }
+}
+
+load();

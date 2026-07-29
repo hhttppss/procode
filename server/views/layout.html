@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title><!--{{TITLE}}--> — ПроКод</title>
+
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+
+  <body class="min-h-screen bg-mist">
+    <a href="#appContent" class="skip-link">Перейти к содержимому</a>
+
+    <!-- Затемнение под меню на узких экранах -->
+    <div id="navBackdrop" class="fixed inset-0 z-40 hidden bg-ink/50 backdrop-blur-sm lg:hidden" hidden></div>
+
+    <div class="lg:flex">
+      <!-- Боковое меню -->
+      <aside
+        id="sidebar"
+        class="fixed inset-y-0 left-0 z-50 flex w-[17rem] -translate-x-full flex-col border-r border-white/5 bg-ink transition-transform duration-300 ease-out lg:translate-x-0"
+      >
+        <div class="flex h-16 shrink-0 items-center justify-between px-5">
+          <a href="/app" class="flex items-center gap-2.5 text-white transition hover:opacity-80">
+            <svg viewBox="0 0 40 40" width="30" height="30" class="text-cobalt" role="img" aria-label="ПроКод">
+              <rect width="40" height="40" rx="11" fill="currentColor" />
+              <path d="M12 14.5 17.5 20 12 25.5" fill="none" stroke="#FFFDF9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <rect x="20.5" y="23" width="8.5" height="3" rx="1.5" fill="#FF9E64" />
+            </svg>
+            <span class="font-display text-base font-semibold tracking-tight">ПроКод</span>
+          </a>
+          <button type="button" id="navClose" class="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Закрыть меню">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <nav class="flex-1 space-y-1 overflow-y-auto px-3 pb-4" aria-label="Разделы платформы">
+          <!--{{NAV}}-->
+        </nav>
+
+        <div class="shrink-0 border-t border-white/10 p-3">
+          <a href="/app/profile" class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-white/5">
+            <span class="avatar shrink-0"><!--{{USER_INITIALS}}--></span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-semibold text-white"><!--{{USER_NAME}}--></span>
+              <span class="block truncate text-2xs text-cobalt-100/50"><!--{{USER_ROLE}}--></span>
+            </span>
+          </a>
+          <button type="button" id="logoutButton" class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition hover:bg-white/5 hover:text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 17l5-5-5-5M20 12H9M12 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6" />
+            </svg>
+            Выйти
+          </button>
+        </div>
+      </aside>
+
+      <!-- Рабочая область -->
+      <div class="flex min-h-screen w-full flex-col lg:pl-[17rem]">
+        <header class="sticky top-0 z-30 border-b border-ink/[0.07] bg-paper/90 backdrop-blur">
+          <div class="flex h-16 items-center gap-3 px-4 sm:px-6">
+            <button type="button" id="navOpen" class="rounded-lg border border-ink/10 p-2 text-muted transition hover:bg-ink/5 hover:text-ink lg:hidden" aria-label="Открыть меню">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+
+            <div class="min-w-0 flex-1">
+              <h1 class="truncate font-display text-lg font-semibold tracking-tight sm:text-xl"><!--{{HEADING}}--></h1>
+              <p class="hidden truncate text-xs text-muted sm:block"><!--{{SUBHEADING}}--></p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <!-- Колокольчик уведомлений -->
+              <div class="relative">
+                <button type="button" id="bellButton" class="relative rounded-xl border border-ink/10 p-2.5 text-muted transition hover:bg-ink/5 hover:text-ink" aria-label="Уведомления" aria-expanded="false">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" />
+                  </svg>
+                  <!-- Скрытие только через атрибут hidden: класс .hidden остался бы навсегда -->
+                  <span id="bellCount" class="absolute -right-1 -top-1 min-w-[1.25rem] rounded-full bg-apricot px-1 text-center font-mono text-[10px] font-semibold leading-5 text-ink" hidden>0</span>
+                </button>
+
+                <div id="bellPanel" class="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-ink/[0.07] bg-white shadow-lift" hidden>
+                  <div class="flex items-center justify-between border-b border-ink/[0.07] px-4 py-3">
+                    <p class="text-sm font-semibold">Уведомления</p>
+                    <button type="button" id="bellReadAll" class="text-xs font-medium text-cobalt transition hover:underline">Прочитать все</button>
+                  </div>
+                  <div id="bellList" class="max-h-[60vh] divide-y divide-ink/[0.06] overflow-y-auto"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main id="appContent" class="flex-1 px-4 py-5 sm:px-6 sm:py-7">
+          <!--{{CONTENT}}-->
+        </main>
+      </div>
+    </div>
+
+    <div id="toasts" class="pointer-events-none fixed bottom-5 right-5 z-[70] flex w-72 flex-col gap-2" role="status" aria-live="polite"></div>
+
+    <!--{{BOOTSTRAP}}-->
+    <script type="module" src="/js/crm/<!--{{SCRIPT}}-->"></script>
+  </body>
+</html>

@@ -1,0 +1,120 @@
+<!-- Финансы. Модуль целиком закрыт для роли «Преподаватель» -->
+<section class="space-y-5">
+  <div class="panel p-4 sm:p-5">
+    <div class="grid gap-3 lg:grid-cols-12">
+      <div class="lg:col-span-3">
+        <label class="field" for="periodFrom">
+          <span class="field-label">С</span>
+          <input id="periodFrom" type="date" class="field-input" />
+        </label>
+      </div>
+      <div class="lg:col-span-3">
+        <label class="field" for="periodTo">
+          <span class="field-label">По</span>
+          <input id="periodTo" type="date" class="field-input" />
+        </label>
+      </div>
+      <div class="lg:col-span-6 flex flex-wrap items-end gap-2">
+        <button type="button" class="btn btn-outline btn-sm" data-quick="month">Этот месяц</button>
+        <button type="button" class="btn btn-outline btn-sm" data-quick="prev-month">Прошлый месяц</button>
+        <button type="button" class="btn btn-outline btn-sm" data-quick="year">Год</button>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button type="button" id="addPayment" class="btn btn-primary btn-sm">Добавить оплату</button>
+      <button type="button" id="addExpense" class="btn btn-outline btn-sm">Добавить расход</button>
+    </div>
+  </div>
+
+  <div id="tiles" class="grid grid-cols-2 gap-3 lg:grid-cols-4"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Динамика</h2>
+      <div class="flex items-center gap-4 text-2xs text-muted">
+        <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-mint"></span>Доход</span>
+        <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-apricot"></span>Расход</span>
+      </div>
+    </div>
+    <div id="chart" class="panel-body"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Начисления преподавателям</h2>
+      <p class="text-xs text-muted">Ставка × проведённые занятия за выбранный период</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Преподаватель</th>
+            <th scope="col">Ставка</th>
+            <th scope="col">Проведено</th>
+            <th scope="col">К начислению</th>
+            <th scope="col">Начислено</th>
+            <th scope="col" class="text-right">Действие</th>
+          </tr>
+        </thead>
+        <tbody id="payrollRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Оплаты учеников</h2></div>
+      <div class="table-scroll">
+        <table class="data-table min-w-[30rem]">
+          <thead>
+            <tr>
+              <th scope="col">Дата</th>
+              <th scope="col">Ученик</th>
+              <th scope="col">Сумма</th>
+              <th scope="col" class="text-right">Действие</th>
+            </tr>
+          </thead>
+          <tbody id="paymentRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Расходы</h2></div>
+      <div class="table-scroll">
+        <table class="data-table min-w-[30rem]">
+          <thead>
+            <tr>
+              <th scope="col">Дата</th>
+              <th scope="col">Категория</th>
+              <th scope="col">Сумма</th>
+              <th scope="col" class="text-right">Действие</th>
+            </tr>
+          </thead>
+          <tbody id="expenseRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2 class="panel-title">Отчёт по занятиям</h2>
+      <p class="text-xs text-muted">За выбранный период</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Преподаватель</th>
+            <th scope="col">Всего занятий</th>
+            <th scope="col">Проведено</th>
+            <th scope="col">Отменено</th>
+          </tr>
+        </thead>
+        <tbody id="lessonReportRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,40 @@
+<!-- Преподаватели. Модуль целиком закрыт для роли «Преподаватель» -->
+<section class="space-y-5">
+  <div id="tiles" class="grid grid-cols-2 gap-3 lg:grid-cols-4"></div>
+
+  <div class="panel p-4 sm:p-5">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <label class="field w-full sm:max-w-xs" for="filterSearch">
+        <span class="field-label">Поиск</span>
+        <input id="filterSearch" type="search" class="field-input" placeholder="ФИО, логин, направление" autocomplete="off" />
+      </label>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="addTeacher" class="btn btn-primary btn-sm">Новый сотрудник</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="table-scroll hidden lg:block">
+      <table class="data-table">
+        <caption class="sr-only">Список сотрудников</caption>
+        <thead>
+          <tr>
+            <th scope="col">ФИО</th>
+            <th scope="col">Логин</th>
+            <th scope="col">Направления</th>
+            <th scope="col">Учеников</th>
+            <th scope="col">Проведено</th>
+            <th scope="col">Ставка</th>
+            <th scope="col">Доступ</th>
+            <th scope="col" class="text-right">Действие</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="cards" class="space-y-3 p-4 lg:hidden"></div>
+  </div>
+
+  <div id="stateBox"></div>
+</section>
