@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Замените на реальный домен перед публикацией
+Sitemap: https://prokod.ru/sitemap.xml

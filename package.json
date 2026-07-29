@@ -1,0 +1,28 @@
+{
+  "name": "procode",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сайт детской онлайн-школы программирования «ПроКод»: лендинг + админ-панель для обработки заявок",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "css": "tailwindcss -i ./src/input.css -o ./public/css/styles.css --minify",
+    "css:watch": "tailwindcss -i ./src/input.css -o ./public/css/styles.css --watch",
+    "build": "npm run css",
+    "seed": "node scripts/seed-demo.js",
+    "seed:reset": "node scripts/seed-demo.js --reset",
+    "users": "node scripts/manage-users.js --list",
+    "user:add": "node scripts/manage-users.js --add"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

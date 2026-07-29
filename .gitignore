@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Secrets and local config
+.env
+.env.local
+.env.*.local
+
+# Runtime data (applications, users, corrupt-file backups)
+data/*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and local tooling
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db

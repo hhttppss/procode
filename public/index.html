@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ПроКод — онлайн-школа программирования для детей 10–17 лет</title>
+  <meta name="description" content="Онлайн-школа программирования для детей 10–17 лет: Python, Roblox, веб-разработка, Unity, основы ИИ. Бесплатный вводный урок — без обязательств.">
+  <link rel="canonical" href="https://prokod.ru/">
+  <meta name="theme-color" content="#0F1222">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:site_name" content="ПроКод">
+  <meta property="og:url" content="https://prokod.ru/">
+  <meta property="og:title" content="ПроКод — онлайн-школа программирования для детей 10–17 лет">
+  <meta property="og:description" content="Бесплатный вводный урок по программированию для детей 10–17 лет: ребёнок пробует направление и уходит с первым результатом, который можно показать.">
+  <!-- Абсолютный URL и PNG: соцсети и мессенджеры не показывают SVG и не разрешают относительные пути.
+       При смене домена поправьте адрес здесь, в canonical и в sitemap.xml. -->
+  <meta property="og:image" content="https://prokod.ru/img/og-cover.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="ПроКод — онлайн-школа программирования для детей 10–17 лет">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ПроКод — онлайн-школа программирования для детей 10–17 лет">
+  <meta name="twitter:description" content="Бесплатный вводный урок по программированию для детей 10–17 лет: ребёнок пробует направление и уходит с первым результатом, который можно показать.">
+  <meta name="twitter:image" content="https://prokod.ru/img/og-cover.png">
+
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "ПроКод",
+    "description": "Онлайн-школа программирования для детей 10–17 лет.",
+    "url": "https://prokod.ru/",
+    "logo": "https://prokod.ru/img/favicon.svg",
+    "telephone": "+7 900 000-00-00",
+    "email": "hello@prokod.ru",
+    "areaServed": "RU",
+    "audience": { "@type": "EducationalAudience", "educationalRole": "student" }
+  }
+  </script>
+</head>
+
+<body id="top">
+
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-ink focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-paper">Перейти к содержимому</a>
+
+<!-- ============================================================ ШАПКА -->
+<header id="siteHeader" class="site-header">
+  <div class="shell flex h-[72px] items-center justify-between gap-6">
+    <a href="#top" class="flex shrink-0 items-center gap-2.5" aria-label="ПроКод — на главную">
+      <svg viewBox="0 0 40 40" class="h-9 w-9 text-cobalt" aria-hidden="true" focusable="false">
+        <rect width="40" height="40" rx="11" fill="currentColor"/>
+        <path d="M12 14.5 17.5 20 12 25.5" fill="none" stroke="#7B93FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="20.5" y="23" width="8.5" height="3" rx="1.5" fill="#FF9E64"/>
+      </svg>
+      <span class="font-display text-lg font-semibold tracking-tight">ПроКод</span>
+    </a>
+
+    <nav class="hidden items-center gap-7 lg:flex" aria-label="Основное меню">
+      <a class="nav-link" href="#directions">Направления</a>
+      <a class="nav-link" href="#how">Как это работает</a>
+      <a class="nav-link" href="#prices">Цены</a>
+      <a class="nav-link" href="#reviews">Отзывы</a>
+      <a class="nav-link" href="#faq">FAQ</a>
+      <a class="nav-link" href="#contacts">Контакты</a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a class="btn btn-sm btn-accent hidden sm:inline-flex" href="#signup">Попробовать бесплатно</a>
+      <button id="burger" type="button"
+              class="-mr-2 flex h-11 w-11 items-center justify-center rounded-full lg:hidden"
+              aria-label="Открыть меню" aria-expanded="false" aria-controls="mobileMenu">
+        <span class="flex flex-col gap-[5px]">
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Мобильное меню -->
+  <div id="mobileMenu" class="fixed inset-0 z-40 hidden bg-ink text-paper lg:hidden">
+    <div class="shell flex h-full flex-col pb-10 pt-24">
+      <nav class="flex flex-col gap-1" aria-label="Меню">
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#directions">Направления</a>
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#how">Как это работает</a>
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#prices">Цены</a>
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#reviews">Отзывы</a>
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#faq">FAQ</a>
+        <a class="border-b border-white/10 py-4 font-display text-2xl" href="#contacts">Контакты</a>
+      </nav>
+      <a class="btn btn-accent mt-8 w-full" href="#signup">Записаться на бесплатный урок</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============================================================ ГЕРОЙ -->
+  <section class="on-ink relative overflow-hidden bg-ink bg-grain pb-16 pt-28 sm:pb-20 sm:pt-32 lg:pb-28 lg:pt-36" aria-labelledby="hero-title">
+    <div class="absolute inset-0 bg-grid" aria-hidden="true"></div>
+    <div class="absolute inset-0 bg-halo" aria-hidden="true"></div>
+
+    <div class="shell relative grid items-center gap-14 lg:grid-cols-12 lg:gap-10">
+
+      <!-- Левая колонка -->
+      <div class="lg:col-span-6">
+        <p class="eyebrow animate-fade-up">Онлайн-школа программирования для детей</p>
+
+        <h1 id="hero-title" class="animate-fade-up mt-6 font-display text-[2rem] font-semibold leading-[1.08] text-white sm:text-[2.75rem] lg:text-[3rem]" style="animation-delay:.08s">
+          Ребёнок создаст первый проект, который <span class="marker-underline">можно показать</span>
+        </h1>
+
+        <p class="animate-fade-up mt-6 max-w-xl text-base leading-relaxed text-cobalt-100/75 sm:text-lg" style="animation-delay:.16s">
+          Живые занятия онлайн с преподавателем, а не курс видеозаписей. Мини-группы до 6 человек,
+          понятная цель на каждом занятии и проект, который ребёнок доведёт до конца.
+        </p>
+
+        <div class="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row" style="animation-delay:.24s">
+          <a class="btn btn-accent" href="#signup">Записаться на бесплатный урок</a>
+          <a class="btn btn-ghost-light" href="#directions">Смотреть направления</a>
+        </div>
+
+        <p class="animate-fade-up mt-4 text-sm text-cobalt-100/50" style="animation-delay:.3s">
+          Урок бесплатный и ни к чему не обязывает — не понравится, просто не продолжаете.
+        </p>
+
+        <dl class="animate-fade-up mt-12 grid grid-cols-2 gap-y-7 border-t border-white/10 pt-8 sm:grid-cols-4 sm:gap-x-4" style="animation-delay:.38s">
+          <div class="sm:border-r sm:border-white/10 sm:pr-4">
+            <dd class="metric-value">10</dd>
+            <dt class="metric-label">направлений обучения</dt>
+          </div>
+          <div class="sm:border-r sm:border-white/10 sm:pr-4">
+            <dd class="metric-value">до 6</dd>
+            <dt class="metric-label">детей в группе</dt>
+          </div>
+          <div class="sm:border-r sm:border-white/10 sm:pr-4">
+            <dd class="metric-value">91%</dd>
+            <dt class="metric-label">остаются после первого месяца</dt>
+          </div>
+          <div>
+            <dd class="metric-value">4,9</dd>
+            <dt class="metric-label">средняя оценка урока из 5</dt>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Правая колонка: «экран ученика» -->
+      <div class="animate-fade-up lg:col-span-6" style="animation-delay:.2s">
+        <div id="studentScreen" class="screen shadow-glow">
+          <div class="screen-bar">
+            <span class="screen-dot bg-red-400/60" aria-hidden="true"></span>
+            <span class="screen-dot bg-apricot/60" aria-hidden="true"></span>
+            <span class="screen-dot bg-mint/60" aria-hidden="true"></span>
+            <div class="ml-2 flex gap-1 overflow-x-auto no-scrollbar" role="tablist" aria-label="Проекты учеников">
+              <button class="screen-tab" role="tab" type="button" id="stab-0" aria-controls="spanel-0" aria-selected="true">Roblox Studio</button>
+              <button class="screen-tab" role="tab" type="button" id="stab-1" aria-controls="spanel-1" aria-selected="false" tabindex="-1">Создание сайтов</button>
+              <button class="screen-tab" role="tab" type="button" id="stab-2" aria-controls="spanel-2" aria-selected="false" tabindex="-1">Python Junior</button>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-[1.15fr_1fr]">
+            <!-- Код -->
+            <div class="code-pane">
+              <pre class="m-0"><code id="screenCode" class="whitespace-pre"></code><span id="screenCaret" class="caret" aria-hidden="true"></span></pre>
+            </div>
+
+            <!-- Результат -->
+            <div class="result-pane">
+              <!-- Roblox -->
+              <div id="spanel-0" role="tabpanel" aria-labelledby="stab-0" tabindex="0">
+                <svg viewBox="0 0 220 130" class="mx-auto h-auto w-full max-w-[220px]" aria-hidden="true">
+                  <g stroke="#7B93FF" stroke-opacity=".45" stroke-width="1">
+                    <path d="M20 96 110 48l90 48-90 26z" fill="#1E36C9" fill-opacity=".35"/>
+                  </g>
+                  <g>
+                    <path d="M74 74 110 54l36 20-36 20z" fill="#2B4BF2" fill-opacity=".9"/>
+                    <path d="M74 74v14l36 20V94z" fill="#1E36C9"/>
+                    <path d="m146 74-36 20v14l36-20z" fill="#4A64F7"/>
+                  </g>
+                  <g>
+                    <path d="M96 44 110 37l14 7-14 7z" fill="#FF9E64"/>
+                    <path d="M96 44v9l14 7v-9z" fill="#F2803D"/>
+                    <path d="m124 44-14 7v9l14-7z" fill="#FFB98C"/>
+                  </g>
+                  <circle cx="110" cy="26" r="6" fill="#5FD8A4"/>
+                </svg>
+                <p class="mt-4 text-center font-mono text-[11px] text-mint-400">▸ Игра опубликована</p>
+              </div>
+
+              <!-- Сайт -->
+              <div id="spanel-1" role="tabpanel" aria-labelledby="stab-1" tabindex="0" hidden>
+                <div class="mx-auto w-full max-w-[240px] overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+                  <div class="flex items-center justify-between border-b border-white/10 px-3 py-2">
+                    <span class="h-1.5 w-10 rounded bg-cobalt-400"></span>
+                    <span class="flex gap-1"><i class="h-1 w-4 rounded bg-white/25"></i><i class="h-1 w-4 rounded bg-white/25"></i><i class="h-1 w-4 rounded bg-white/25"></i></span>
+                  </div>
+                  <div class="px-3 py-4">
+                    <span class="block h-2 w-28 rounded bg-white/70"></span>
+                    <span class="mt-2 block h-1.5 w-20 rounded bg-white/25"></span>
+                    <span class="mt-3 inline-block h-4 w-20 rounded bg-apricot"></span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 px-3 pb-3">
+                    <span class="h-10 rounded bg-white/10"></span>
+                    <span class="h-10 rounded bg-white/10"></span>
+                  </div>
+                </div>
+                <p class="mt-4 text-center font-mono text-[11px] text-mint-400">▸ Сайт открывается по ссылке</p>
+              </div>
+
+              <!-- Python -->
+              <div id="spanel-2" role="tabpanel" aria-labelledby="stab-2" tabindex="0" hidden>
+                <div class="mx-auto w-full max-w-[240px] rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed">
+                  <p class="text-white/45">Число: <span class="text-white">50</span></p>
+                  <p class="text-cobalt-400">Больше!</p>
+                  <p class="text-white/45">Число: <span class="text-white">75</span></p>
+                  <p class="text-cobalt-400">Меньше!</p>
+                  <p class="text-white/45">Число: <span class="text-white">63</span></p>
+                  <p class="text-mint-400">Угадал за 3 попытки</p>
+                </div>
+                <p class="mt-4 text-center font-mono text-[11px] text-mint-400">▸ Программа работает</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-cobalt-100/50">
+          <span class="text-cobalt-100/80">Матвей, 11 лет · 3-й месяц обучения</span>
+          <span aria-hidden="true">·</span>
+          <span>проект ученика</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ДЛЯ КОГО -->
+  <section class="section bg-paper" aria-labelledby="audience-title">
+    <div class="shell">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Возрастные группы</p>
+        <h2 id="audience-title" class="section-title">Кому подходит «ПроКод»</h2>
+      </div>
+
+      <div class="mt-12 grid gap-6 lg:mt-16 lg:grid-cols-2 lg:gap-8">
+
+        <article class="reveal card border-cobalt/20 bg-gradient-to-b from-cobalt-100/60 to-white p-8 sm:p-10">
+          <p class="badge bg-cobalt text-white">10–13 лет</p>
+          <h3 class="mt-5 font-display text-2xl leading-snug">Первые проекты и уверенность за компьютером</h3>
+          <p class="mt-4 leading-relaxed text-muted">
+            В этом возрасте ребёнку важно быстро увидеть результат и не бояться ошибаться. Мы даём короткие понятные
+            задачи и наглядные инструменты — Roblox Studio, простые сайты, Python для начинающих, — где уже через
+            15–20 минут что-то работает. Ребёнок учится доводить дело до конца на небольших, но настоящих проектах,
+            а не на абстрактных упражнениях.
+          </p>
+          <ul class="mt-7 space-y-3.5">
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Свой первый работающий проект — игру или сайт, а не пересказ теории</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Привычку доводить задачу до результата, а не бросать на середине</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Базовые понятия программирования: алгоритмы, переменные, логику</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Уверенность за компьютером, которая не пропадает после первой ошибки</li>
+          </ul>
+          <button type="button" class="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-cobalt transition hover:gap-2.5" data-scroll-to="#directions">
+            Смотреть направления
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="reveal card border-apricot/30 bg-gradient-to-b from-apricot-100/70 to-white p-8 sm:p-10">
+          <p class="badge bg-apricot text-ink">13–17 лет</p>
+          <h3 class="mt-5 font-display text-2xl leading-snug">Настоящие инструменты и первые серьёзные навыки</h3>
+          <p class="mt-4 leading-relaxed text-muted">
+            В подростковом возрасте важен результат, которым можно гордиться и который на что-то влияет — на портфолио,
+            на разговор о будущей профессии, на собственный проект. Мы даём инструменты, которыми пользуются
+            практикующие разработчики и дизайнеры: языки программирования, игровые движки, редакторы. Ребёнок работает
+            над проектом несколько месяцев и выходит с готовым результатом, а не с общей фразой «прошли курс».
+          </p>
+          <ul class="mt-7 space-y-3.5">
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Портфолио с реальными проектами: сайт, приложение, игра или бот</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Практические навыки в инструментах, которыми пользуются профессионалы</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Опыт работы над проектом от идеи до готового результата</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Понимание, какое направление в разработке или дизайне ему интересно на самом деле</li>
+          </ul>
+          <button type="button" class="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-apricot-600 transition hover:gap-2.5" data-scroll-to="#directions">
+            Смотреть направления
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ НАПРАВЛЕНИЯ -->
+  <section id="directions" class="section scroll-mt-20 bg-mist" aria-labelledby="directions-title">
+    <div class="shell">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Программы обучения</p>
+        <h2 id="directions-title" class="section-title">Направления обучения</h2>
+        <p class="section-lead">
+          10 программ для двух возрастных групп: ребёнок выбирает то, что интересно ему, а не то, что выбрали за него.
+          Возраст указан на каждой карточке.
+        </p>
+      </div>
+
+      <!-- Все направления показаны сразу. Две сетки подряд с одинаковым отступом
+           читаются как одна: 4 карточки в ряд для младших, 3 — для старших. -->
+      <div class="mt-10 grid gap-6 md:grid-cols-2 lg:mt-14 lg:grid-cols-4">
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8 20.5 7.4v9.2L12 21.2 3.5 16.6V7.4z"/><path d="m3.5 7.4 8.5 4.6 8.5-4.6"/><path d="M12 12v9.2"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-cobalt"></span>10–13 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Roblox Studio</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Своя игра в Roblox с нуля</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок создаёт игровые миры и механики в Roblox Studio — от ландшафта до логики поведения персонажей. Мы объясняем не только кнопки редактора, но и язык Lua, на котором держится вся логика игры.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт свою игру в Roblox и опубликует её, чтобы в неё могли поиграть друзья.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">Roblox Studio</span><span class="chip">основы Lua</span><span class="chip">гейм-дизайн</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Roblox Studio">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M6.4 7h.01M9.2 7h.01"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-cobalt"></span>10–13 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Создание сайтов</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Первый сайт своими руками</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится собирать веб-страницы: от структуры и текста до цвета и изображений. К концу курса он понимает, как устроен любой сайт в интернете, и может изменить его сам.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> сверстает и опубликует личный сайт-визитку или сайт для школьного проекта.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">HTML</span><span class="chip">CSS</span><span class="chip">вёрстка страниц</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Создание сайтов">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7.5 10 2.5 2.2-2.5 2.2M12.8 14.6h3.7"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-cobalt"></span>10–13 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Python Junior</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Первый код на Python</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок знакомится с программированием на одном из самых распространённых языков — простом для старта и мощном на практике. Мы разбираем переменные, циклы и условия на понятных примерах: играх, генераторах, мини-калькуляторах.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> напишет текстовую игру или калькулятор на Python и покажет, как он работает.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">переменные и типы данных</span><span class="chip">циклы и условия</span><span class="chip">редактор кода</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Python Junior">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 5.8v5.4c0 4 2.9 7.6 7 8.8 4.1-1.2 7-4.8 7-8.8V5.8z"/><path d="m9.2 11.8 2 2 3.6-3.8"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-cobalt"></span>10–13 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Цифровая грамотность</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Уверенность в интернете и технике</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится безопасно и осмысленно пользоваться компьютером и интернетом: искать и проверять информацию, работать в облачных сервисах, распознавать мошеннические сайты. Это база, без которой сложно двигаться дальше в любое направление IT.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> настроит личный аккаунт и облачное хранилище, подготовит доклад о безопасности в сети.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">2 месяца · 16 занятий</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">поиск и проверка информации</span><span class="chip">облачные сервисы</span><span class="chip">цифровая безопасность</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Цифровая грамотность">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+      </div>
+
+      <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5c-2 0-2.5 1-2.5 2.6v1.8c0 1.4-.7 2.1-2 2.1 1.3 0 2 .7 2 2.1v1.8c0 1.6.5 2.6 2.5 2.6M15 4.5c2 0 2.5 1 2.5 2.6v1.8c0 1.4.7 2.1 2 2.1-1.3 0-2 .7-2 2.1v1.8c0 1.6-.5 2.6-2.5 2.6"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Python Developer</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">От основ до рабочей программы</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок изучает Python глубже школьной программы: структуры данных, функции, работа с файлами и библиотеками. К концу курса он пишет программы, которые решают конкретную задачу, а не просто выводят текст на экран.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> разработает консольное приложение или бота и запустит его на своём компьютере.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">функции и структуры данных</span><span class="chip">библиотеки</span><span class="chip">отладка кода</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Python Developer">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.6 5.4l-3.2 13.2"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Веб-разработка (HTML, CSS, JavaScript)</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Живые сайты с интерактивом</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок проходит путь от статичной вёрстки до интерактивных страниц: кнопок, форм и анимаций на JavaScript. Финальный проект — сайт, который реагирует на действия пользователя, а не просто показывает текст.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> создаст многостраничный сайт с интерактивными элементами и разместит его в интернете.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">HTML и CSS</span><span class="chip">основы JavaScript</span><span class="chip">публикация сайта</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Веб-разработка (HTML, CSS, JavaScript)">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.6 8.5h8.8a4.5 4.5 0 0 1 4.4 3.6l.4 2.3a2.5 2.5 0 0 1-4.6 1.7l-.7-1.2H8.1l-.7 1.2a2.5 2.5 0 0 1-4.6-1.7l.4-2.3a4.5 4.5 0 0 1 4.4-3.6Z"/><path d="M7 11.4v2.2M5.9 12.5h2.2M15.6 12h.01M17.6 13.5h.01"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Unity Game Developer</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">3D-игра на профессиональном движке</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок разрабатывает игру в Unity — том же движке, на котором делают коммерческие игры. Мы разбираем C#, физику объектов, управление персонажем и логику уровней.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт играбельный уровень с управлением персонажем и опубликует демоверсию игры.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">7 месяцев · 56 занятий</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">C#</span><span class="chip">работа в Unity</span><span class="chip">логика уровней</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Unity Game Developer">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="7" r="2"/><circle cx="5.5" cy="17" r="2"/><circle cx="12" cy="12" r="2.2"/><circle cx="18.8" cy="12" r="2"/><path d="M7.3 8.1 10.2 10.8M7.3 15.9 10.2 13.2M14.2 12h2.6"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Основы ИИ (ChatGPT, Midjourney, нейросети)</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Нейросети как рабочий инструмент</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится грамотно работать с нейросетями: формулировать запросы, проверять результат и использовать ИИ для учёбы и своих проектов. Мы объясняем, как устроены языковые и графические модели — без запугивания и без иллюзий, что ИИ сделает всё за него.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт проект с использованием нейросетей — от текста и изображений до простого чат-бота.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">промпт-инжиниринг</span><span class="chip">работа с нейросетями</span><span class="chip">проверка результата</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Основы ИИ (ChatGPT, Midjourney, нейросети)">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20h17"/><path d="M6.5 16.5v-3.8M11 16.5V8.5M15.5 16.5v-6M20 16.5v-11"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">Предпринимательство</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Свой проект от идеи до презентации</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок разбирает, как устроен бизнес: от идеи и целевой аудитории до бюджета и презентации проекта инвестору. Мы используем реальные кейсы и разбираем чужие ошибки, чтобы не повторять их на практике.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> подготовит бизнес-план своего проекта и презентует его на защите перед группой.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">планирование бюджета</span><span class="chip">презентация идеи</span><span class="chip">анализ рынка</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Предпринимательство">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+
+        <article class="card card-hover relative flex flex-col">
+          <svg viewBox="0 0 24 24" class="h-10 w-10 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.2h18M9.2 9.2V20"/><path d="m13.6 12.4 5.2 2.1-2.1.8-.8 2.1z" fill="currentColor" stroke="none"/></svg>
+          <p class="mt-5"><span class="badge bg-ink/[0.06] text-ink/70"><span class="h-1.5 w-1.5 rounded-full bg-apricot"></span>13–17 лет</span></p>
+          <h3 class="mt-3 font-display text-xl">UI/UX-дизайн</h3>
+          <p class="mt-1.5 text-sm font-semibold text-cobalt">Дизайн интерфейсов, понятный пользователю</p>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится проектировать интерфейсы приложений и сайтов: строить логику экранов, выбирать шрифты и цвета, проверять удобство на реальных людях. Работает в Figma — том же редакторе, что и дизайнеры в IT-компаниях.</p>
+          <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> спроектирует интерфейс мобильного приложения и соберёт кликабельный прототип в Figma.</p>
+          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">работа в Figma</span><span class="chip">прототипирование</span><span class="chip">основы UX-исследований</span></div>
+          <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="UI/UX-дизайн">
+            Записаться на направление
+            <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ЦЕНЫ -->
+  <section id="prices" class="section scroll-mt-20 bg-paper" aria-labelledby="prices-title">
+    <div class="shell">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Тарифы</p>
+        <h2 id="prices-title" class="section-title">Понятные цены без сюрпризов</h2>
+        <p class="section-lead">
+          Платите помесячно, без длинных контрактов. Тариф можно выбрать после бесплатного вводного урока —
+          торопиться не нужно.
+        </p>
+      </div>
+
+      <div class="mt-12 grid items-start gap-6 lg:mt-16 lg:grid-cols-3">
+
+        <!-- Старт -->
+        <article class="reveal card flex flex-col p-8">
+          <h3 class="font-display text-xl">Старт</h3>
+          <p class="mt-6 flex items-baseline gap-2">
+            <span class="price-value">4 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-3 font-mono text-2xs uppercase tracking-wider text-muted">1 занятие в неделю · 4 занятия в месяц по 60 минут</p>
+          <ul class="mt-7 flex-1 space-y-3.5 border-t border-ink/10 pt-7">
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Занятия в мини-группе до 6 человек с постоянным преподавателем</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Проверка домашних заданий и обратная связь после каждого занятия</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Ссылка на запись урока и материалы в чате группы</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Короткий отчёт о прогрессе ребёнка для родителя раз в месяц</li>
+          </ul>
+          <p class="mt-7 text-sm leading-relaxed text-muted">
+            Тем, кто хочет попробовать формат без нагрузки — например, вместе со школой или другими секциями.
+          </p>
+          <button type="button" class="btn btn-outline mt-7 w-full" data-scroll-to="#signup">Выбрать «Старт»</button>
+        </article>
+
+        <!-- Стандарт — рекомендуемый -->
+        <article class="reveal on-ink flex flex-col rounded-3xl bg-ink p-8 text-paper shadow-lift lg:-mt-4 lg:pb-10 lg:pt-10">
+          <div class="flex items-center justify-between gap-4">
+            <h3 class="font-display text-xl">Стандарт</h3>
+            <span class="badge bg-apricot text-ink">Оптимальный темп</span>
+          </div>
+          <p class="mt-6 flex items-baseline gap-2">
+            <span class="price-value text-white">8 990 ₽</span>
+            <span class="text-sm text-cobalt-100/60">/ месяц</span>
+          </p>
+          <p class="mt-3 font-mono text-2xs uppercase tracking-wider text-cobalt-100/60">2 занятия в неделю · 8 занятий в месяц по 60 минут</p>
+          <ul class="mt-7 flex-1 space-y-3.5 border-t border-white/10 pt-7 text-cobalt-100/90">
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Всё из тарифа «Старт»</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Постоянная группа до 6 человек и один преподаватель на весь курс</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Промежуточный проект каждый месяц — есть что показать раньше, чем закончится курс</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Приоритетная запись на новые направления и мастер-классы</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint-400" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Бесплатная консультация с методистом при смене направления в первый месяц</li>
+          </ul>
+          <p class="mt-7 text-sm leading-relaxed text-cobalt-100/60">
+            Тем, кто хочет заметный результат за разумный срок и системную нагрузку без перегруза.
+          </p>
+          <button type="button" class="btn btn-accent mt-7 w-full" data-scroll-to="#signup">Выбрать «Стандарт»</button>
+        </article>
+
+        <!-- Интенсив -->
+        <article class="reveal card flex flex-col p-8">
+          <h3 class="font-display text-xl">Интенсив</h3>
+          <p class="mt-6 flex items-baseline gap-2">
+            <span class="price-value">12 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-3 font-mono text-2xs uppercase tracking-wider text-muted">3 занятия в неделю · 12 занятий в месяц по 60 минут</p>
+          <ul class="mt-7 flex-1 space-y-3.5 border-t border-ink/10 pt-7">
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Всё из тарифа «Стандарт»</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Дополнительное занятие в неделю для разбора сложных тем</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Расширенное домашнее задание и код-ревью от преподавателя</li>
+            <li class="check-item"><svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-mint" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round"/></svg>Возможность пройти курс быстрее стандартного срока</li>
+          </ul>
+          <p class="mt-7 text-sm leading-relaxed text-muted">
+            Тем, кто занимается осознанно и хочет пройти курс в сжатые сроки — например, перед олимпиадой
+            или конкурсом проектов.
+          </p>
+          <button type="button" class="btn btn-outline mt-7 w-full" data-scroll-to="#signup">Выбрать «Интенсив»</button>
+        </article>
+      </div>
+
+      <ul class="reveal mt-12 grid gap-6 border-t border-ink/10 pt-10 sm:grid-cols-3">
+        <li class="flex gap-3 text-sm leading-relaxed text-muted">
+          <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/></svg>
+          Оплата помесячно — без предоплаты за год вперёд.
+        </li>
+        <li class="flex gap-3 text-sm leading-relaxed text-muted">
+          <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 1 1 .8 6.5"/><path d="M4 4.5V9h4.5"/></svg>
+          Если ребёнок пропустил занятия не по своей вине, пересчитаем стоимость или перенесём их на следующий месяц.
+        </li>
+        <li class="flex gap-3 text-sm leading-relaxed text-muted">
+          <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 shrink-0 text-cobalt" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 20V9.5M3 12.5h3.5V20H3zM10 20V4.5M6.5 8.5H10M13.5 20v-7M10 16h3.5M17 20V7.5M13.5 11H17M21 20V4h-4v16"/></svg>
+          Принимаем оплату картой онлайн, для юридических лиц — переводом по счёту.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ ПРЕИМУЩЕСТВА -->
+  <section class="on-ink section relative overflow-hidden bg-ink bg-grain" aria-labelledby="benefits-title">
+    <div class="absolute inset-0 bg-grid opacity-60" aria-hidden="true"></div>
+    <div class="shell relative">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Почему мы</p>
+        <h2 id="benefits-title" class="section-title text-white">Почему родители выбирают «ПроКод»</h2>
+      </div>
+
+      <div class="mt-12 grid gap-5 md:grid-cols-2 lg:mt-16 lg:grid-cols-6">
+
+        <article class="reveal card-ink lg:col-span-3">
+          <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 2.5-8 11h6l-1 8 8-11h-6z"/></svg>
+          <h3 class="mt-5 font-display text-lg text-white">Быстрый первый результат</h3>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">Ребёнок доводит до конца небольшой проект каждые 4–6 занятий, а не ждёт финала курса, чтобы увидеть, что получилось. Прогресс виден быстро — это держит интерес лучше любых уговоров сесть за компьютер.</p>
+        </article>
+
+        <article class="reveal card-ink lg:col-span-3">
+          <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3.5 20.5 9.5 9 21H3v-6z"/><path d="m12 6 6 6"/></svg>
+          <h3 class="mt-5 font-display text-lg text-white">Настоящие инструменты</h3>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">Roblox Studio, Python, Unity, Figma — те же программы, которыми пользуются взрослые разработчики и дизайнеры. Ребёнок с первых занятий работает в реальной среде, а не в упрощённой учебной программе для детей.</p>
+        </article>
+
+        <article class="reveal card-ink lg:col-span-2">
+          <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.8 1.8 0 0 1 0 3.6h-3a1.8 1.8 0 0 0 0 3.6h4"/></svg>
+          <h3 class="mt-5 font-display text-lg text-white">Прозрачная стоимость</h3>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">Цена зависит только от количества занятий в месяц — без доплат за «материалы» или «продвинутый уровень». Что входит в тариф, вы видите до оплаты, а не узнаёте по ходу обучения.</p>
+        </article>
+
+        <article class="reveal card-ink lg:col-span-2">
+          <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12s3.2-6 8.5-6 8.5 6 8.5 6-3.2 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+          <h3 class="mt-5 font-display text-lg text-white">Прогресс виден вам</h3>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">После каждого занятия куратор коротко пишет вам: что прошли, что получилось, над чем ещё работаем. Раз в месяц — отчёт по успеваемости, а не общая фраза «всё хорошо».</p>
+        </article>
+
+        <article class="reveal card-ink lg:col-span-2">
+          <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+          <h3 class="mt-5 font-display text-lg text-white">Преподаватели с опытом</h3>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">Мы берём в школу разработчиков и дизайнеров с опытом реальных проектов, а не студентов на подработке. Перед стартом каждый проходит методическую подготовку и пробное занятие с наставником.</p>
+        </article>
+
+        <article class="reveal rounded-3xl border border-apricot/25 bg-apricot/[0.07] p-6 sm:p-7 md:col-span-2 lg:col-span-6">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 5.8v5.4c0 4 2.9 7.6 7 8.8 4.1-1.2 7-4.8 7-8.8V5.8z"/><path d="M12 9.2v3.4M12 15.6h.01"/></svg>
+            <div>
+              <h3 class="font-display text-lg text-white">Можно остановиться без потерь</h3>
+              <p class="mt-2 leading-relaxed text-cobalt-100/70">Не подошло направление — меняем его в первый месяц без доплаты. Не подошла школа вообще — вернём деньги за оплаченные, но непройденные занятия.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ КАК ПРОХОДИТ ОБУЧЕНИЕ -->
+  <section id="how" class="section scroll-mt-20 bg-paper" aria-labelledby="how-title">
+    <div class="shell">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Порядок действий</p>
+        <h2 id="how-title" class="section-title">Как проходит обучение</h2>
+      </div>
+
+      <ol class="relative mt-12 grid gap-10 lg:mt-16 lg:grid-cols-5 lg:gap-6">
+        <li class="pointer-events-none absolute inset-x-0 top-[7px] hidden border-t border-dashed border-ink/15 lg:block" aria-hidden="true"></li>
+
+        <li class="reveal relative flex flex-col lg:pr-4">
+          <span class="mb-5 block h-3.5 w-3.5 rounded-full border-2 border-cobalt bg-paper"></span>
+          <p class="step-num">01</p>
+          <h3 class="mt-2 font-display text-lg leading-snug">Бесплатный вводный урок</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок знакомится с преподавателем и пробует направление на практике: пишет первые строчки кода или собирает первый объект в редакторе. Вы получаете обратную связь — подходит ли формат именно вашему ребёнку.</p>
+          <p class="mt-auto pt-4"><span class="chip">30–40 минут</span></p>
+        </li>
+
+        <li class="reveal relative flex flex-col lg:pr-4">
+          <span class="mb-5 block h-3.5 w-3.5 rounded-full border-2 border-cobalt bg-paper"></span>
+          <p class="step-num">02</p>
+          <h3 class="mt-2 font-display text-lg leading-snug">Подбор направления и тарифа</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Если формат подошёл, помогаем выбрать направление по интересам ребёнка и тариф по нужному темпу занятий. Отвечаем на вопросы до оплаты, а не после.</p>
+          <p class="mt-auto pt-4"><span class="chip">5–10 минут созвона</span></p>
+        </li>
+
+        <li class="reveal relative flex flex-col lg:pr-4">
+          <span class="mb-5 block h-3.5 w-3.5 rounded-full border-2 border-cobalt bg-paper"></span>
+          <p class="step-num">03</p>
+          <h3 class="mt-2 font-display text-lg leading-snug">Первое занятие в группе</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнка добавляют в постоянную группу до 6 человек с одним преподавателем на весь курс. С первого урока — практика, а не долгое знакомство с теорией.</p>
+          <p class="mt-auto pt-4"><span class="chip">60 минут</span></p>
+        </li>
+
+        <li class="reveal relative flex flex-col lg:pr-4">
+          <span class="mb-5 block h-3.5 w-3.5 rounded-full border-2 border-cobalt bg-paper"></span>
+          <p class="step-num">04</p>
+          <h3 class="mt-2 font-display text-lg leading-snug">Регулярные занятия и проекты</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Каждые несколько занятий — новый рубеж: рабочий кусок игры, страница сайта или программа, которая уже что-то делает. Домашние задания закрепляют тему, но не превращаются во вторую школу.</p>
+          <p class="mt-auto pt-4"><span class="chip">от 2 до 7 месяцев</span></p>
+        </li>
+
+        <li class="reveal relative flex flex-col">
+          <span class="mb-5 block h-3.5 w-3.5 rounded-full border-2 border-apricot bg-apricot"></span>
+          <p class="step-num text-apricot-600">05</p>
+          <h3 class="mt-2 font-display text-lg leading-snug">Итоговый проект и разбор</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted">В конце курса ребёнок показывает готовый проект и получает обратную связь от преподавателя. Вы получаете ссылку на результат — можно показать бабушке, а можно приложить к портфолио.</p>
+          <p class="mt-auto pt-4"><span class="chip">1 занятие</span></p>
+        </li>
+      </ol>
+
+      <div class="reveal mt-14 rounded-3xl border border-ink/10 bg-mist p-8 sm:p-10">
+        <h3 class="font-display text-xl">Формат урока</h3>
+        <p class="mt-4 max-w-4xl leading-relaxed text-muted">
+          Занятие длится 60 минут и проходит в мини-группе до 6 человек — при желании можно заниматься индивидуально,
+          стоимость в этом случае считаем отдельно. Уроки идут по видеосвязи (например, в Zoom) с демонстрацией экрана
+          и общим доступом к рабочему файлу, поэтому преподаватель в реальном времени видит, что делает ребёнок,
+          и может поправить на месте. Из техники нужен компьютер или ноутбук с выходом в интернет и наушники
+          с микрофоном; список бесплатных программ для конкретного направления присылаем до старта занятий.
+        </p>
+        <dl class="mt-8 grid gap-6 border-t border-ink/10 pt-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt class="font-mono text-2xl font-medium tnum">60 мин</dt>
+            <dd class="mt-1 text-sm text-muted">длительность занятия</dd>
+          </div>
+          <div>
+            <dt class="font-mono text-2xl font-medium tnum">до 6</dt>
+            <dd class="mt-1 text-sm text-muted">человек в группе, есть индивидуальные</dd>
+          </div>
+          <div>
+            <dt class="font-mono text-2xl font-medium">Видеосвязь</dt>
+            <dd class="mt-1 text-sm text-muted">с демонстрацией экрана и общим файлом</dd>
+          </div>
+          <div>
+            <dt class="font-mono text-2xl font-medium">Ноутбук</dt>
+            <dd class="mt-1 text-sm text-muted">интернет и наушники с микрофоном</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ОТЗЫВЫ -->
+  <section id="reviews" class="section scroll-mt-20 bg-mist" aria-labelledby="reviews-title">
+    <div class="shell">
+      <div class="reveal max-w-2xl">
+        <p class="eyebrow">Обратная связь</p>
+        <h2 id="reviews-title" class="section-title">Что говорят родители</h2>
+      </div>
+
+      <div class="reveal -mx-[--shell-x] mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto px-[--shell-x] pb-4 no-scrollbar lg:mx-0 lg:mt-16 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:px-0 lg:pb-0">
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Матвей сам показывает, что собрал на занятии. Через месяц прислал ссылку на свою игру — я поиграла, персонаж двигается ровно как он задумал.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cobalt font-display text-lg text-white" aria-hidden="true">А</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Анна</span>
+              <span class="block text-sm text-muted">мама Матвея, 11 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">Roblox Studio</span></span>
+            </span>
+          </figcaption>
+        </figure>
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Начинали почти с нуля. За полгода София написала бота для школьного чата, я только наблюдал. После каждого урока приходит короткий итог — это удобно.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-apricot font-display text-lg text-ink" aria-hidden="true">Д</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Дмитрий</span>
+              <span class="block text-sm text-muted">папа Софии, 15 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">Python Developer</span></span>
+            </span>
+          </figcaption>
+        </figure>
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Думали, хватит на месяц-два. Кирилл доучился до конца и сделал сайт для дачного кооператива — дед теперь всем его показывает.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mint font-display text-lg text-ink" aria-hidden="true">Е</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Елена</span>
+              <span class="block text-sm text-muted">мама Кирилла, 12 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">Создание сайтов</span></span>
+            </span>
+          </figcaption>
+        </figure>
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Алиса всегда рисовала, но я не понимала, куда это применить. Теперь у неё готовый прототип приложения в Figma и мысли про профессию.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cobalt font-display text-lg text-white" aria-hidden="true">М</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Марина</span>
+              <span class="block text-sm text-muted">мама Алисы, 16 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">UI/UX-дизайн</span></span>
+            </span>
+          </figcaption>
+        </figure>
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Сын младший в классе, боялся, что не потянет. Задачи идут по нарастающей — через два месяца Тимофей написал игру-угадайку для всей семьи.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-apricot font-display text-lg text-ink" aria-hidden="true">И</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Игорь</span>
+              <span class="block text-sm text-muted">папа Тимофея, 10 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">Python Junior</span></span>
+            </span>
+          </figcaption>
+        </figure>
+
+        <figure class="card flex w-[86vw] shrink-0 snap-start flex-col sm:w-[62vw] lg:w-auto lg:shrink">
+          <blockquote class="flex-1 leading-relaxed text-ink/85">«Артём просил компьютер для игр, а мы предложили делать их самому. Через полгода показывал друзьям свой уровень вместо очередной игры на телефоне.»</blockquote>
+          <figcaption class="mt-6 flex items-center gap-3 border-t border-ink/10 pt-6">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mint font-display text-lg text-ink" aria-hidden="true">О</span>
+            <span class="min-w-0">
+              <span class="block font-semibold">Ольга</span>
+              <span class="block text-sm text-muted">мама Артёма, 14 лет</span>
+              <span class="mt-1.5 inline-block"><span class="chip">Unity Game Developer</span></span>
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ FAQ -->
+  <section id="faq" class="section scroll-mt-20 bg-paper" aria-labelledby="faq-title">
+    <div class="shell grid gap-10 lg:grid-cols-12 lg:gap-12">
+
+      <div class="reveal lg:col-span-4">
+        <div class="lg:sticky lg:top-28">
+          <p class="eyebrow">Вопросы и ответы</p>
+          <h2 id="faq-title" class="section-title">Частые вопросы</h2>
+          <p class="section-lead text-base">
+            Не нашли ответ? Напишите нам в Telegram или задайте вопрос в комментарии к заявке — ответим до звонка.
+          </p>
+          <a class="btn btn-outline mt-7" href="#signup">Задать вопрос в заявке</a>
+        </div>
+      </div>
+
+      <div class="reveal lg:col-span-8" id="faqList">
+        <details class="faq-item">
+          <summary>С какого возраста и уровня можно начать? Если ребёнок никогда не программировал — это нормально?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Да, большинство детей приходят без опыта — программы для 10–13 и для 13–17 лет рассчитаны именно на нулевой уровень. На бесплатном вводном уроке преподаватель определит, с чего начать конкретно вашему ребёнку, и предложит направление по возрасту и интересам.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Нужен ли мощный компьютер или можно заниматься с обычного ноутбука?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Для большинства направлений хватает обычного ноутбука или компьютера пятилетней давности — важнее стабильный интернет и наушники с микрофоном. Отдельные требования есть у Unity Game Developer и Roblox Studio: список параметров и бесплатных программ мы присылаем до первого занятия.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Что если ребёнок бросит через месяц?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Такое случается, если направление выбрано не по интересу, — поэтому мы начинаем с бесплатного вводного урока и в первый месяц разрешаем бесплатно сменить курс. Если после этого формат всё равно не подходит, можно приостановить занятия и вернуть деньги за оплаченные, но не пройденные уроки.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Как я, как родитель, буду видеть прогресс, если сам не разбираюсь в программировании?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Не нужно разбираться в коде, чтобы понять прогресс. После каждого занятия куратор присылает короткое сообщение с темой урока и результатом, а раз в месяц — отчёт с итогами. Плюс ребёнок сам показывает вам проект: игру, сайт или программу, которую можно открыть и попробовать.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Кто ведёт занятия?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Занятия ведут преподаватели с опытом в разработке, дизайне или профильном преподавании — мы отбираем их по итогам собеседования и пробного занятия с методистом. За каждой группой закреплён один преподаватель на весь курс, а не разные люди каждую неделю.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Что будет, если ребёнок пропустит занятие?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Предупредите куратора заранее в чате — мы дадим запись урока и материалы, чтобы ребёнок не выпал из темы. При пропуске по уважительной причине занятие можно перенести на другой день той же недели или в счёт следующего месяца.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Занятия индивидуальные или в группе? Можно ли позаниматься один на один?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">По умолчанию — мини-группы до 6 человек: так ребёнок видит, что вопросы бывают не только у него, и учится не бояться ошибок при других. Индивидуальные занятия тоже доступны, стоимость и расписание в этом случае считаем отдельно — уточните на вводном уроке.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Насколько безопасно онлайн-общение ребёнка с преподавателем и другими детьми?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Все занятия проходят в закрытой группе по ссылке, которую не видит никто, кроме учеников курса, преподавателя и куратора. Переписка с преподавателем ведётся в общем чате группы, где всегда есть куратор, а не в личных сообщениях один на один.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Заключаете ли вы договор? Какие документы я получу как родитель?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Да, перед первым платежом мы оформляем договор оказания образовательных услуг и отправляем его вам на почту вместе с чеком об оплате. По итогам курса выдаём сертификат о прохождении программы.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Можно ли сменить направление, если ребёнку разонравилось?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Можно, это частая ситуация, особенно в 10–13 лет, когда интересы ещё формируются. В первый месяц смена направления бесплатна, дальше — по согласованию с методистом, обычно с нового оплаченного периода.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Сколько времени в неделю нужно на домашние задания?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">В среднем 30–60 минут после каждого занятия — задания рассчитаны так, чтобы закрепить тему, а не создать вторую нагрузку после школы. Часть заданий можно делать прямо во время урока, если ребёнок быстро справляется.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Не вредно ли ребёнку проводить ещё больше времени за компьютером?<svg viewBox="0 0 20 20" class="faq-sign" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg></summary>
+          <p class="faq-answer">Мы понимаем это опасение и строим занятия так, чтобы время за экраном было осмысленным: 60 минут с чередованием объяснения, практики и обсуждения, а не пассивный просмотр видео. Общее время за компьютером стоит планировать вместе с ребёнком с учётом школьной нагрузки и отдыха — здесь решение остаётся за вами.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ФОРМА ЗАЯВКИ -->
+  <section id="signup" class="on-ink section relative scroll-mt-20 overflow-hidden bg-ink bg-grain" aria-labelledby="signup-title">
+    <div class="absolute inset-0 bg-halo" aria-hidden="true"></div>
+
+    <div class="shell relative grid gap-12 lg:grid-cols-12 lg:gap-16">
+
+      <div class="lg:col-span-5">
+        <p class="eyebrow">Бесплатный вводный урок</p>
+        <h2 id="signup-title" class="section-title text-white">Запишите ребёнка на бесплатный вводный урок</h2>
+        <p class="section-lead">
+          Оставьте заявку — свяжемся в течение рабочего дня и подберём удобное время и направление.
+        </p>
+
+        <ol class="mt-10 space-y-6">
+          <li class="flex gap-4">
+            <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 font-mono text-xs text-apricot">1</span>
+            <span class="leading-relaxed text-cobalt-100/80">Преподаватель познакомится с ребёнком и определит его уровень</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 font-mono text-xs text-apricot">2</span>
+            <span class="leading-relaxed text-cobalt-100/80">Ребёнок попробует направление на практике — напишет код или соберёт первый объект</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 font-mono text-xs text-apricot">3</span>
+            <span class="leading-relaxed text-cobalt-100/80">Вы получите честную рекомендацию по направлению и тарифу — без обязательства покупать</span>
+          </li>
+        </ol>
+
+        <div class="mt-10 border-t border-white/10 pt-8">
+          <p class="text-sm text-cobalt-100/50">Не любите формы? Напишите или позвоните:</p>
+          <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+            <a class="font-mono text-sm text-white underline decoration-apricot decoration-2 underline-offset-4" href="tel:+79000000000">+7 900 000-00-00</a>
+            <a class="font-mono text-sm text-white underline decoration-apricot decoration-2 underline-offset-4" href="https://t.me/prokod_school">@prokod_school</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="card-ink p-6 sm:p-8">
+
+          <form id="applicationForm" novalidate>
+            <input type="text" name="website" id="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute h-px w-px overflow-hidden opacity-0">
+
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div class="field">
+                <label class="field-label" for="parentName">Ваше имя</label>
+                <input class="field-input" type="text" id="parentName" name="parentName" autocomplete="name" placeholder="Как к вам обращаться">
+                <p class="field-error" data-error-for="parentName"></p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="phone">Телефон</label>
+                <input class="field-input" type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="+7 (___) ___-__-__">
+                <p class="field-error" data-error-for="phone"></p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="childName">Имя ребёнка</label>
+                <input class="field-input" type="text" id="childName" name="childName" placeholder="Как зовут ребёнка">
+                <p class="field-error" data-error-for="childName"></p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="childAge">Возраст ребёнка</label>
+                <select class="field-input" id="childAge" name="childAge">
+                  <option value="" disabled selected>Например, 12</option>
+                  <option value="10">10 лет</option>
+                  <option value="11">11 лет</option>
+                  <option value="12">12 лет</option>
+                  <option value="13">13 лет</option>
+                  <option value="14">14 лет</option>
+                  <option value="15">15 лет</option>
+                  <option value="16">16 лет</option>
+                  <option value="17">17 лет</option>
+                </select>
+                <p class="field-error" data-error-for="childAge"></p>
+              </div>
+
+              <div class="field sm:col-span-2">
+                <label class="field-label" for="course">Интересующее направление</label>
+                <select class="field-input" id="course" name="course">
+                  <option value="" disabled selected>Выберите направление</option>
+                  <optgroup label="10–13 лет">
+                    <option value="Roblox Studio">Roblox Studio</option>
+                    <option value="Создание сайтов">Создание сайтов</option>
+                    <option value="Python Junior">Python Junior</option>
+                    <option value="Цифровая грамотность">Цифровая грамотность</option>
+                  </optgroup>
+                  <optgroup label="13–17 лет">
+                    <option value="Python Developer">Python Developer</option>
+                    <option value="Веб-разработка (HTML, CSS, JavaScript)">Веб-разработка (HTML, CSS, JavaScript)</option>
+                    <option value="Unity Game Developer">Unity Game Developer</option>
+                    <option value="Основы ИИ (ChatGPT, Midjourney, нейросети)">Основы ИИ (ChatGPT, Midjourney, нейросети)</option>
+                    <option value="Предпринимательство">Предпринимательство</option>
+                    <option value="UI/UX-дизайн">UI/UX-дизайн</option>
+                  </optgroup>
+                  <option value="Ещё не выбрали">Ещё не выбрали — поможете определиться</option>
+                </select>
+                <p class="field-error" data-error-for="course"></p>
+              </div>
+
+              <div class="field sm:col-span-2">
+                <label class="field-label" for="comment">Комментарий (необязательно)</label>
+                <textarea class="field-input" id="comment" name="comment" rows="3" placeholder="Расскажите, что уже пробовали, или задайте вопрос"></textarea>
+                <p class="field-error" data-error-for="comment"></p>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <label class="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-cobalt-100/70" for="consent">
+                <input class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-white/25 bg-white/10 text-cobalt accent-apricot" type="checkbox" id="consent" name="consent">
+                <span>Отправляя форму, вы даёте согласие «ПроКод» на обработку персональных данных в соответствии с <a class="text-white underline decoration-apricot decoration-2 underline-offset-4" href="/privacy.html">политикой конфиденциальности</a>.</span>
+              </label>
+              <p class="field-error" data-error-for="consent"></p>
+            </div>
+
+            <button type="submit" id="applicationSubmit" class="btn btn-accent mt-7 w-full"
+                    data-label-idle="Записаться на бесплатный урок" data-label-loading="Отправляем…">
+              Записаться на бесплатный урок
+            </button>
+          </form>
+
+          <div id="applicationSuccess" hidden tabindex="-1" class="py-6 text-center">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 text-mint-400">
+              <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mt-5 font-display text-2xl text-white">Заявка принята</h3>
+            <p class="mx-auto mt-3 max-w-md leading-relaxed text-cobalt-100/70">
+              Мы свяжемся с вами в течение рабочего дня, чтобы подобрать удобное время для вводного урока.
+              Проверьте, пожалуйста, что телефон указан без опечаток.
+            </p>
+          </div>
+
+          <div id="applicationError" hidden role="alert" class="mt-5 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm leading-relaxed text-red-200">
+            <p data-error-message></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================================================ ФУТЕР -->
+<footer id="contacts" class="on-ink scroll-mt-20 bg-ink-900 pb-10 pt-16 text-cobalt-100/70 sm:pt-20">
+  <div class="shell">
+    <div class="grid gap-10 lg:grid-cols-12 lg:gap-8">
+
+      <div class="lg:col-span-5">
+        <div class="flex items-center gap-2.5 text-white">
+          <svg viewBox="0 0 40 40" class="h-9 w-9 text-cobalt" aria-hidden="true" focusable="false">
+            <rect width="40" height="40" rx="11" fill="currentColor"/>
+            <path d="M12 14.5 17.5 20 12 25.5" fill="none" stroke="#7B93FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="20.5" y="23" width="8.5" height="3" rx="1.5" fill="#FF9E64"/>
+          </svg>
+          <span class="font-display text-lg font-semibold tracking-tight">ПроКод</span>
+        </div>
+        <p class="mt-5 max-w-md leading-relaxed">
+          «ПроКод» — онлайн-школа программирования для детей 10–17 лет. Учим доводить проект от идеи до результата,
+          которым можно поделиться, а не просто проходить темы по программе.
+        </p>
+      </div>
+
+      <div class="lg:col-span-3">
+        <h2 class="font-mono text-2xs uppercase tracking-[0.18em] text-white/40">Контакты</h2>
+        <ul class="mt-5 space-y-3">
+          <li><a class="transition hover:text-white" href="tel:+79000000000">+7 900 000-00-00</a></li>
+          <li><a class="transition hover:text-white" href="mailto:hello@prokod.ru">hello@prokod.ru</a></li>
+          <li><a class="transition hover:text-white" href="https://t.me/prokod_school">@prokod_school</a></li>
+        </ul>
+      </div>
+
+      <div class="lg:col-span-4">
+        <h2 class="font-mono text-2xs uppercase tracking-[0.18em] text-white/40">Разделы</h2>
+        <ul class="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
+          <li><a class="transition hover:text-white" href="#directions">Направления</a></li>
+          <li><a class="transition hover:text-white" href="#prices">Цены</a></li>
+          <li><a class="transition hover:text-white" href="#reviews">Отзывы</a></li>
+          <li><a class="transition hover:text-white" href="#faq">FAQ</a></li>
+          <li><a class="transition hover:text-white" href="/privacy.html">Политика конфиденциальности</a></li>
+          <li><a class="transition hover:text-white" href="/oferta.html">Договор оферты</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-14 flex flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/35 sm:flex-row sm:items-center sm:justify-between">
+      <p>© <span id="year">2026</span> «ПроКод». Все права защищены.</p>
+      <a class="transition hover:text-white/70" href="/admin">Вход для менеджера</a>
+    </div>
+  </div>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "С какого возраста и уровня можно начать? Если ребёнок никогда не программировал — это нормально?", "acceptedAnswer": { "@type": "Answer", "text": "Да, большинство детей приходят без опыта — программы для 10–13 и для 13–17 лет рассчитаны именно на нулевой уровень. На бесплатном вводном уроке преподаватель определит, с чего начать конкретно вашему ребёнку, и предложит направление по возрасту и интересам." } },
+    { "@type": "Question", "name": "Нужен ли мощный компьютер или можно заниматься с обычного ноутбука?", "acceptedAnswer": { "@type": "Answer", "text": "Для большинства направлений хватает обычного ноутбука или компьютера пятилетней давности — важнее стабильный интернет и наушники с микрофоном. Отдельные требования есть у Unity Game Developer и Roblox Studio: список параметров и бесплатных программ мы присылаем до первого занятия." } },
+    { "@type": "Question", "name": "Что если ребёнок бросит через месяц?", "acceptedAnswer": { "@type": "Answer", "text": "Такое случается, если направление выбрано не по интересу, — поэтому мы начинаем с бесплатного вводного урока и в первый месяц разрешаем бесплатно сменить курс. Если после этого формат всё равно не подходит, можно приостановить занятия и вернуть деньги за оплаченные, но не пройденные уроки." } },
+    { "@type": "Question", "name": "Как я, как родитель, буду видеть прогресс, если сам не разбираюсь в программировании?", "acceptedAnswer": { "@type": "Answer", "text": "Не нужно разбираться в коде, чтобы понять прогресс. После каждого занятия куратор присылает короткое сообщение с темой урока и результатом, а раз в месяц — отчёт с итогами. Плюс ребёнок сам показывает вам проект: игру, сайт или программу, которую можно открыть и попробовать." } },
+    { "@type": "Question", "name": "Кто ведёт занятия?", "acceptedAnswer": { "@type": "Answer", "text": "Занятия ведут преподаватели с опытом в разработке, дизайне или профильном преподавании — мы отбираем их по итогам собеседования и пробного занятия с методистом. За каждой группой закреплён один преподаватель на весь курс, а не разные люди каждую неделю." } },
+    { "@type": "Question", "name": "Что будет, если ребёнок пропустит занятие?", "acceptedAnswer": { "@type": "Answer", "text": "Предупредите куратора заранее в чате — мы дадим запись урока и материалы, чтобы ребёнок не выпал из темы. При пропуске по уважительной причине занятие можно перенести на другой день той же недели или в счёт следующего месяца." } },
+    { "@type": "Question", "name": "Занятия индивидуальные или в группе? Можно ли позаниматься один на один?", "acceptedAnswer": { "@type": "Answer", "text": "По умолчанию — мини-группы до 6 человек: так ребёнок видит, что вопросы бывают не только у него, и учится не бояться ошибок при других. Индивидуальные занятия тоже доступны, стоимость и расписание в этом случае считаем отдельно — уточните на вводном уроке." } },
+    { "@type": "Question", "name": "Насколько безопасно онлайн-общение ребёнка с преподавателем и другими детьми?", "acceptedAnswer": { "@type": "Answer", "text": "Все занятия проходят в закрытой группе по ссылке, которую не видит никто, кроме учеников курса, преподавателя и куратора. Переписка с преподавателем ведётся в общем чате группы, где всегда есть куратор, а не в личных сообщениях один на один." } },
+    { "@type": "Question", "name": "Заключаете ли вы договор? Какие документы я получу как родитель?", "acceptedAnswer": { "@type": "Answer", "text": "Да, перед первым платежом мы оформляем договор оказания образовательных услуг и отправляем его вам на почту вместе с чеком об оплате. По итогам курса выдаём сертификат о прохождении программы." } },
+    { "@type": "Question", "name": "Можно ли сменить направление, если ребёнку разонравилось?", "acceptedAnswer": { "@type": "Answer", "text": "Можно, это частая ситуация, особенно в 10–13 лет, когда интересы ещё формируются. В первый месяц смена направления бесплатна, дальше — по согласованию с методистом, обычно с нового оплаченного периода." } },
+    { "@type": "Question", "name": "Сколько времени в неделю нужно на домашние задания?", "acceptedAnswer": { "@type": "Answer", "text": "В среднем 30–60 минут после каждого занятия — задания рассчитаны так, чтобы закрепить тему, а не создать вторую нагрузку после школы. Часть заданий можно делать прямо во время урока, если ребёнок быстро справляется." } },
+    { "@type": "Question", "name": "Не вредно ли ребёнку проводить ещё больше времени за компьютером?", "acceptedAnswer": { "@type": "Answer", "text": "Мы понимаем это опасение и строим занятия так, чтобы время за экраном было осмысленным: 60 минут с чередованием объяснения, практики и обсуждения, а не пассивный просмотр видео. Общее время за компьютером стоит планировать вместе с ребёнком с учётом школьной нагрузки и отдыха — здесь решение остаётся за вами." } }
+  ]
+}
+</script>
+
+<script src="/js/landing.js" defer></script>
+<script src="/js/form.js" defer></script>
+</body>
+</html>

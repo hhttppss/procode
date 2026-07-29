@@ -1,0 +1,447 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ПроКод — дизайн-система
+   Палитра:  ink #0F1222 · cobalt #2B4BF2 · apricot #FF9E64
+             mint #3FBF8F · paper #FFFDF9 · mist #EEF0F6
+   Шрифты:   Unbounded (дисплей) · Onest (текст) · JetBrains Mono (данные)
+   Подключение шрифтов — тегом <link> в <head>, не через @import.
+   ============================================================ */
+
+@layer base {
+  :root {
+    --shell-x: clamp(1.25rem, 4vw, 2rem);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+    font-feature-settings: 'ss01' 1, 'cv01' 1;
+  }
+
+  ::selection {
+    @apply bg-apricot/30 text-ink;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-semibold tracking-tight;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Единое кольцо фокуса на всём сайте */
+  :focus-visible {
+    @apply outline-none ring-2 ring-apricot ring-offset-2 ring-offset-paper;
+  }
+
+  .on-ink :focus-visible {
+    @apply ring-offset-ink-800;
+  }
+
+  /* Цифры в таблицах и метриках — моноширинные по ширине */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* ---------- Каркас ---------- */
+  .shell {
+    @apply mx-auto w-full max-w-content px-[--shell-x];
+  }
+
+  .section {
+    @apply py-20 sm:py-24 lg:py-28;
+  }
+
+  .section-tight {
+    @apply py-16 sm:py-20;
+  }
+
+  /* Надзаголовок секции — набран моноширинным, как строка кода */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 font-mono text-2xs uppercase tracking-[0.18em] text-cobalt;
+  }
+
+  .eyebrow::before {
+    content: '//';
+    @apply text-apricot;
+  }
+
+  .on-ink .eyebrow {
+    @apply text-cobalt-400;
+  }
+
+  .section-title {
+    @apply mt-4 font-display text-3xl leading-[1.12] sm:text-4xl lg:text-[2.75rem];
+  }
+
+  .section-lead {
+    @apply mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg;
+  }
+
+  .on-ink .section-lead {
+    @apply text-cobalt-100/70;
+  }
+
+  /* ---------- Кнопки ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5
+           text-[0.9375rem] font-semibold leading-none transition
+           duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2.5 text-sm;
+  }
+
+  .btn-primary {
+    @apply bg-cobalt text-white shadow-[0_10px_30px_-12px_rgba(43,75,242,0.9)]
+           hover:-translate-y-0.5 hover:bg-cobalt-700 active:translate-y-0;
+  }
+
+  .btn-accent {
+    @apply bg-apricot text-ink shadow-[0_10px_30px_-12px_rgba(255,158,100,0.9)]
+           hover:-translate-y-0.5 hover:bg-apricot-600 active:translate-y-0;
+  }
+
+  .btn-ink {
+    @apply bg-ink text-paper hover:-translate-y-0.5 hover:bg-ink-700 active:translate-y-0;
+  }
+
+  .btn-outline {
+    @apply border border-ink/15 bg-transparent text-ink hover:border-ink/40 hover:bg-ink/5;
+  }
+
+  .btn-ghost-light {
+    @apply border border-white/20 text-white hover:border-white/50 hover:bg-white/10;
+  }
+
+  /* ---------- Карточки ---------- */
+  .card {
+    @apply rounded-3xl border border-ink/[0.07] bg-white p-6 shadow-card transition duration-300 sm:p-7;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1 hover:border-cobalt/25 hover:shadow-lift;
+  }
+
+  .card-ink {
+    @apply rounded-3xl border border-white/10 bg-ink-700 p-6 sm:p-7;
+  }
+
+  /* ---------- Хром «экрана ученика» — фирменный мотив ---------- */
+  .screen {
+    @apply overflow-hidden rounded-2xl border border-white/10 bg-ink-900;
+  }
+
+  .screen-bar {
+    @apply flex items-center gap-2 border-b border-white/10 bg-white/[0.04] px-4 py-3;
+  }
+
+  .screen-dot {
+    @apply h-2.5 w-2.5 rounded-full;
+  }
+
+  .caret {
+    @apply inline-block w-[0.55ch] bg-apricot align-baseline animate-blink;
+    height: 1.05em;
+    transform: translateY(0.15em);
+  }
+
+  /* ---------- Поля форм ---------- */
+  .field {
+    @apply block;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-medium text-ink;
+  }
+
+  .on-ink .field-label {
+    @apply text-cobalt-100;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-ink/15 bg-white px-4 py-3 text-[0.9375rem]
+           text-ink placeholder:text-muted/60 transition
+           focus:border-cobalt focus:outline-none focus:ring-2 focus:ring-cobalt/25;
+  }
+
+  .on-ink .field-input {
+    @apply border-white/15 bg-white/[0.06] text-white placeholder:text-white/35
+           focus:border-apricot focus:ring-apricot/25;
+  }
+
+  .field-input[aria-invalid='true'] {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/25;
+  }
+
+  .field-error {
+    @apply mt-1.5 hidden text-sm text-red-500;
+  }
+
+  .field-error.is-shown {
+    @apply block;
+  }
+
+  select.field-input {
+    @apply appearance-none bg-[length:1.15rem] bg-[right_0.9rem_center] bg-no-repeat pr-11;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235A6079' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .on-ink select.field-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9B8FF' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .on-ink select.field-input option {
+    @apply bg-ink-700 text-white;
+  }
+
+  /* ---------- Бейджи и статусы ---------- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-2xs font-semibold uppercase tracking-wider;
+  }
+
+  .status {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .status::before {
+    content: '';
+    @apply h-1.5 w-1.5 rounded-full bg-current;
+  }
+
+  .status-new {
+    @apply border-cobalt/25 bg-cobalt-100 text-cobalt-700;
+  }
+
+  .status-agreed {
+    @apply border-mint/30 bg-mint-100 text-mint-600;
+  }
+
+  .status-refused {
+    @apply border-red-200 bg-red-50 text-red-600;
+  }
+
+  .status-thinking {
+    @apply border-apricot/40 bg-apricot-100 text-apricot-600;
+  }
+
+  .status-noanswer {
+    @apply border-ink/15 bg-mist text-muted;
+  }
+
+  .status-callback {
+    @apply border-violet-200 bg-violet-50 text-violet-700;
+  }
+
+  /* ---------- Появление при скролле ---------- */
+  .reveal {
+    @apply translate-y-5 opacity-0 transition-[opacity,transform] duration-700 ease-out;
+  }
+
+  .reveal.is-visible {
+    @apply translate-y-0 opacity-100;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      @apply translate-y-0 opacity-100;
+    }
+  }
+}
+
+@layer utilities {
+  /* Тонкая «сетка чертежа» для тёмных секций */
+  .bg-grid {
+    background-image: linear-gradient(rgba(123, 147, 255, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(123, 147, 255, 0.07) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Мягкое свечение под тёмным героем */
+  .bg-halo {
+    background-image: radial-gradient(60% 55% at 18% 0%, rgba(43, 75, 242, 0.35), transparent 70%),
+      radial-gradient(45% 45% at 88% 12%, rgba(255, 158, 100, 0.16), transparent 70%);
+  }
+
+  /* Зернистость поверх тёмных плоскостей */
+  .bg-grain::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 opacity-[0.16] mix-blend-overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(90deg, #000 78%, transparent 100%);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-cobalt-400 via-cobalt-300 to-apricot bg-clip-text text-transparent;
+  }
+
+  /* Подчёркивание-маркер под словом в заголовке.
+     Сделано фоновым градиентом, а не ::after с отрицательным z-index:
+     псевдоэлемент за текстом пропадал бы под фоном секции. */
+  .marker-underline {
+    background-image: linear-gradient(to top, rgba(255, 158, 100, 0.85) 0.36em, transparent 0.36em);
+    background-repeat: no-repeat;
+    background-position: 0 0.02em;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ===== Лендинг: дополнительные компоненты ===== */
+
+@layer components {
+  /* ---------- Шапка ---------- */
+  .site-header {
+    @apply fixed inset-x-0 top-0 z-50 text-white transition-colors duration-300;
+  }
+
+  .site-header.is-scrolled {
+    @apply bg-paper/90 text-ink shadow-[0_1px_0_rgba(15,18,34,0.08)] backdrop-blur-md;
+  }
+
+  .nav-link {
+    @apply text-sm font-medium text-current opacity-70 transition hover:opacity-100;
+  }
+
+  .burger-line {
+    @apply block h-0.5 w-6 rounded bg-current transition duration-300;
+  }
+
+  /* ---------- Показатели доверия в герое ---------- */
+  .metric-value {
+    @apply font-mono text-2xl font-medium text-white tnum sm:text-3xl;
+  }
+
+  .metric-label {
+    @apply mt-1 block text-xs leading-snug text-cobalt-100/60;
+  }
+
+  /* ---------- Мелкие элементы ---------- */
+  .chip {
+    @apply inline-flex items-center rounded-md bg-ink/[0.06] px-2 py-1 text-2xs font-medium text-muted;
+  }
+
+  .on-ink .chip {
+    @apply bg-white/10 text-cobalt-100/80;
+  }
+
+  .check-item {
+    @apply flex gap-3 text-[0.9375rem] leading-relaxed;
+  }
+
+  /* ---------- Карточка направления ---------- */
+  .course-outcome {
+    @apply mt-5 border-l-2 border-apricot bg-apricot-100/50 py-2 pl-4 pr-3 text-sm leading-relaxed text-ink/80;
+  }
+
+  /* ---------- Тарифы ---------- */
+  .price-value {
+    @apply font-display text-4xl font-semibold tnum;
+  }
+
+  /* ---------- Шаги обучения ---------- */
+  .step-num {
+    @apply font-mono text-sm font-medium tracking-widest text-cobalt;
+  }
+
+  /* ---------- FAQ ---------- */
+  .faq-item {
+    @apply border-b border-ink/10;
+  }
+
+  .faq-item > summary {
+    @apply flex cursor-pointer list-none items-start justify-between gap-6 py-5
+           text-base font-semibold leading-snug transition hover:text-cobalt sm:text-lg;
+  }
+
+  .faq-item > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-sign {
+    @apply relative mt-0.5 h-5 w-5 shrink-0 text-cobalt transition-transform duration-300;
+  }
+
+  .faq-item[open] .faq-sign {
+    @apply rotate-45;
+  }
+
+  .faq-answer {
+    @apply -mt-1 max-w-2xl pb-6 pr-8 text-[0.9375rem] leading-relaxed text-muted;
+  }
+
+  /* ---------- «Экран ученика» ---------- */
+  .screen-tab {
+    @apply rounded-md px-2.5 py-1 font-mono text-[11px] leading-none text-white/45 transition hover:text-white/80;
+  }
+
+  .screen-tab[aria-selected='true'] {
+    @apply bg-white/10 text-white shadow-[inset_0_-2px_0_0_#FF9E64];
+  }
+
+  /* Цвет задан явно: без него неразмеченные куски кода наследуют тёмный текст body */
+  .code-pane {
+    @apply overflow-x-auto p-4 font-mono text-[11.5px] leading-[1.75] text-cobalt-100/85 sm:p-5 sm:text-xs;
+  }
+
+  .result-pane {
+    @apply flex min-h-[168px] flex-col justify-center border-t border-white/10
+           bg-ink-800 p-4 sm:min-h-[232px] sm:border-l sm:border-t-0 sm:p-5;
+  }
+
+  /* Подсветка синтаксиса */
+  .tok-kw {
+    @apply text-cobalt-400;
+  }
+  .tok-str {
+    @apply text-mint-400;
+  }
+  .tok-num {
+    @apply text-apricot;
+  }
+  .tok-fn {
+    @apply text-white/90;
+  }
+  .tok-com {
+    @apply text-white/30;
+  }
+  .tok-pun {
+    @apply text-white/45;
+  }
+}
