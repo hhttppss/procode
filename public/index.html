@@ -914,31 +914,31 @@
             <div class="grid gap-5 sm:grid-cols-2">
               <div class="field">
                 <label class="field-label" for="parentName">Ваше имя</label>
-                <input class="field-input" type="text" id="parentName" name="parentName" autocomplete="name" placeholder="Как к вам обращаться">
-                <p class="field-error" data-error-for="parentName"></p>
+                <input class="field-input" type="text" id="parentName" name="parentName" autocomplete="name" placeholder="Как к вам обращаться" aria-describedby="parentName-error">
+                <p class="field-error" id="parentName-error" data-error-for="parentName" role="alert"></p>
               </div>
 
               <div class="field">
                 <label class="field-label" for="phone">Телефон</label>
-                <input class="field-input" type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="+7 (___) ___-__-__">
-                <p class="field-error" data-error-for="phone"></p>
+                <input class="field-input" type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="+7 (___) ___-__-__" aria-describedby="phone-error">
+                <p class="field-error" id="phone-error" data-error-for="phone" role="alert"></p>
               </div>
 
               <div class="field sm:col-span-2">
                 <label class="field-label" for="email">Email <span class="font-normal text-cobalt-100/50">— необязательно</span></label>
-                <input class="field-input" type="email" id="email" name="email" autocomplete="email" inputmode="email" placeholder="Пришлём памятку к уроку">
-                <p class="field-error" data-error-for="email"></p>
+                <input class="field-input" type="email" id="email" name="email" autocomplete="email" inputmode="email" placeholder="Пришлём памятку к уроку" aria-describedby="email-error">
+                <p class="field-error" id="email-error" data-error-for="email" role="alert"></p>
               </div>
 
               <div class="field">
                 <label class="field-label" for="childName">Имя ребёнка</label>
-                <input class="field-input" type="text" id="childName" name="childName" placeholder="Как зовут ребёнка">
-                <p class="field-error" data-error-for="childName"></p>
+                <input class="field-input" type="text" id="childName" name="childName" placeholder="Как зовут ребёнка" aria-describedby="childName-error">
+                <p class="field-error" id="childName-error" data-error-for="childName" role="alert"></p>
               </div>
 
               <div class="field">
                 <label class="field-label" for="childAge">Возраст ребёнка</label>
-                <select class="field-input" id="childAge" name="childAge">
+                <select class="field-input" id="childAge" name="childAge" aria-describedby="childAge-error">
                   <option value="" disabled selected>Например, 12</option>
                   <option value="10">10 лет</option>
                   <option value="11">11 лет</option>
@@ -949,12 +949,12 @@
                   <option value="16">16 лет</option>
                   <option value="17">17 лет</option>
                 </select>
-                <p class="field-error" data-error-for="childAge"></p>
+                <p class="field-error" id="childAge-error" data-error-for="childAge" role="alert"></p>
               </div>
 
               <div class="field sm:col-span-2">
                 <label class="field-label" for="course">Интересующее направление</label>
-                <select class="field-input" id="course" name="course">
+                <select class="field-input" id="course" name="course" aria-describedby="course-error">
                   <option value="" disabled selected>Выберите направление</option>
                   <optgroup label="10–13 лет">
                     <option value="Roblox Studio">Roblox Studio</option>
@@ -972,22 +972,22 @@
                   </optgroup>
                   <option value="Ещё не выбрали">Ещё не выбрали — поможете определиться</option>
                 </select>
-                <p class="field-error" data-error-for="course"></p>
+                <p class="field-error" id="course-error" data-error-for="course" role="alert"></p>
               </div>
 
               <div class="field sm:col-span-2">
                 <label class="field-label" for="comment">Комментарий (необязательно)</label>
-                <textarea class="field-input" id="comment" name="comment" rows="3" placeholder="Расскажите, что уже пробовали, или задайте вопрос"></textarea>
-                <p class="field-error" data-error-for="comment"></p>
+                <textarea class="field-input" id="comment" name="comment" rows="3" placeholder="Расскажите, что уже пробовали, или задайте вопрос" aria-describedby="comment-error"></textarea>
+                <p class="field-error" id="comment-error" data-error-for="comment" role="alert"></p>
               </div>
             </div>
 
             <div class="mt-6">
               <label class="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-cobalt-100/70" for="consent">
-                <input class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-white/25 bg-white/10 text-cobalt accent-apricot" type="checkbox" id="consent" name="consent">
+                <input class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-white/25 bg-white/10 text-cobalt accent-apricot" type="checkbox" id="consent" name="consent" aria-describedby="consent-error">
                 <span>Отправляя форму, вы даёте согласие «ПроКод» на обработку персональных данных в соответствии с <a class="text-white underline decoration-apricot decoration-2 underline-offset-4" href="/privacy.html">политикой конфиденциальности</a>.</span>
               </label>
-              <p class="field-error" data-error-for="consent"></p>
+              <p class="field-error" id="consent-error" data-error-for="consent" role="alert"></p>
             </div>
 
             <button type="submit" id="applicationSubmit" class="btn btn-accent mt-7 w-full"

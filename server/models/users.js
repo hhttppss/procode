@@ -171,24 +171,39 @@ async function create({ login, password, role, name, phone, email, courses, rate
   if (!db.asText(name)) errors.name = 'Укажите ФИО сотрудника.';
   if (!catalog.ROLE_IDS.includes(role)) errors.role = 'Выберите роль.';
 
+  // Ранняя проверка — ради формы: занятый логин показывается вместе с остальными
+  // ошибками полей и не заставляет считать хэш зря. Настоящая гарантия — в транзакции ниже.
   if (!loginError && (await exists(login))) errors.login = 'Такой логин уже занят.';
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
+  // scrypt считается до транзакции: он занимает около 50 мс, и всё это время
+  // общая очередь записи стояла бы занятой.
   const salt = makeSalt();
-  const user = await store.create({
-    login: db.asText(login),
-    salt,
-    hash: await hashPassword(password, salt),
-    role,
-    name,
-    phone,
-    email,
-    courses,
-    rate,
-    note,
-    active: active === undefined ? true : active,
+  const hash = await hashPassword(password, salt);
+
+  // Проверка занятости логина и создание записи — одной транзакцией: раздельными
+  // вызовами пять одновременных запросов заводили пять сотрудников с одним логином.
+  const key = loginKey(login);
+  const user = await db.transaction(['users'], (tx) => {
+    if (tx.users.find((item) => loginKey(item.login) === key)) return null;
+
+    return tx.users.insert({
+      login: db.asText(login),
+      salt,
+      hash,
+      role,
+      name,
+      phone,
+      email,
+      courses,
+      rate,
+      note,
+      active: active === undefined ? true : active,
+    });
   });
+
+  if (!user) return { ok: false, errors: { login: 'Такой логин уже занят.' } };
 
   return { ok: true, user };
 }

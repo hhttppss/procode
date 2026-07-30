@@ -5,11 +5,14 @@
  * Запуск: npm start (или node server/index.js).
  */
 
+const compression = require('compression');
 const express = require('express');
 const path = require('path');
 
-const auth = require('./auth');
+// config подключается первым намеренно: он выставляет process.env.TZ, а всё,
+// что считает «сегодня» и «эту неделю», должно увидеть уже правильный пояс.
 const config = require('./config');
+const auth = require('./auth');
 const models = require('./models');
 
 const PUBLIC_DIR = path.join(config.rootDir, 'public');
@@ -51,6 +54,13 @@ app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', CSP);
   next();
 });
+
+/**
+ * Сжатие ответов. Стоит до статики и до маршрутов: самое тяжёлое здесь — styles.css
+ * и HTML лендинга, а их отдаёт express.static.
+ * За nginx этот слой лучше выключить и сжимать на прокси — см. README.
+ */
+app.use(compression());
 
 app.use(express.json({ limit: '64kb' }));
 
@@ -186,6 +196,8 @@ async function start() {
     console.log(`  Лендинг:    ${base}/`);
     console.log(`  Платформа:  ${base}/app`);
     console.log(`  Вход:       ${base}/login`);
+    // Пояс печатается на старте: после деплоя на UTC-сервер это первое, что стоит проверить.
+    console.log(`  Часовой пояс: ${config.timezone}`);
     console.log('  Стили:      npm run css — пересобрать CSS после правок разметки');
     console.log('');
 

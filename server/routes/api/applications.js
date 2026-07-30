@@ -13,7 +13,9 @@ const audit = require('../../models/audit');
 const catalog = require('../../domain/catalog');
 const db = require('../../db');
 const notify = require('../../domain/notify');
-const students = require('../../models/students');
+// Карточки учеников здесь создаются транзакцией по имени коллекции, а не методами модели,
+// но модуль всё равно нужен: именно он объявляет коллекцию «students».
+require('../../models/students');
 const users = require('../../models/users');
 const { wrap, fail, failValidation, dayBoundsMs, bodyOf } = require('./helpers');
 
@@ -136,6 +138,16 @@ router.patch(
     const current = await applications.getById(req.params.id);
     if (!current) return fail(res, 404, 'Заявка не найдена.');
 
+    // Статус заявки с карточкой ученика заморожен в обе стороны.
+    // Без этого «Отказ» в заявке оставлял активного ученика с занятиями и оплатами:
+    // в карточке ничего не менялось, и две записи об одном ребёнке говорили разное.
+    // Комментарий менеджера при этом сохранять можно — блокируем только смену статуса.
+    if (current.studentId && patch.status !== undefined && patch.status !== current.status) {
+      return failValidation(res, {
+        status: 'По заявке заведена карточка ученика — статус меняется в ней, а не здесь.',
+      });
+    }
+
     // Статус «Ученик зачислен» ставится только конвертацией — иначе заявка и карточка разойдутся.
     if (patch.status === 'enrolled' && !current.studentId) {
       return failValidation(res, {
@@ -153,8 +165,27 @@ router.patch(
 router.delete(
   '/:id',
   wrap(async (req, res) => {
-    const removed = await applications.remove(req.params.id);
-    if (!removed) return fail(res, 404, 'Заявка не найдена.');
+    // Проверка «карточка ученика ещё жива» и удаление — одной транзакцией:
+    // иначе между ними успевает пройти конвертация, и ученик остаётся со ссылкой
+    // на несуществующую заявку. Ссылка без карточки (данные старых версий) не мешает:
+    // удалять такую заявку можно.
+    const result = await db.transaction(['applications', 'students'], (tx) => {
+      const application = tx.applications.getById(req.params.id);
+      if (!application) return { ok: false, status: 404, message: 'Заявка не найдена.' };
+
+      if (application.studentId && tx.students.getById(application.studentId)) {
+        return {
+          ok: false,
+          status: 409,
+          message: 'По заявке заведена карточка ученика. Сначала удалите карточку — после этого заявка удалится.',
+        };
+      }
+
+      tx.applications.remove(application.id);
+      return { ok: true };
+    });
+
+    if (!result.ok) return fail(res, result.status, result.message);
     return res.json({ ok: true });
   })
 );
@@ -164,58 +195,72 @@ router.delete(
 router.post(
   '/:id/convert',
   wrap(async (req, res) => {
-    const application = await applications.getById(req.params.id);
-    if (!application) return fail(res, 404, 'Заявка не найдена.');
-    if (application.studentId) {
-      return fail(res, 409, 'По этой заявке уже создана карточка ученика.');
-    }
-
     const body = bodyOf(req);
-    const errors = {};
 
-    const name = db.asText(body.name, 120) || application.childName;
-    if (!name) errors.name = 'Укажите имя ребёнка.';
-
+    // Преподавателя проверяем до транзакции: коллекция users в неё не входит,
+    // а на гонку эта проверка не влияет — сотрудника здесь только читают.
     const teacherId = db.asText(body.teacherId);
     if (teacherId) {
       const teacher = await users.getById(teacherId);
-      if (!teacher || teacher.role !== 'teacher') errors.teacherId = 'Преподаватель не найден.';
+      if (!teacher || teacher.role !== 'teacher') return failValidation(res, { teacherId: 'Преподаватель не найден.' });
     }
 
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
+    // Проверка «заявка ещё не сконвертирована», создание карточки и отметка в заявке —
+    // одной транзакцией по двум коллекциям. Раздельными вызовами пять одновременных
+    // запросов делали из одной заявки пять учеников.
+    const result = await db.transaction(['applications', 'students'], (tx) => {
+      const application = tx.applications.getById(req.params.id);
+      if (!application) return { ok: false, status: 404, message: 'Заявка не найдена.' };
+      if (application.studentId) {
+        return { ok: false, status: 409, message: 'По этой заявке уже создана карточка ученика.' };
+      }
 
-    // Данные переносятся из заявки; администратор может уточнить их прямо в окне конвертации.
-    const student = await students.create({
-      name,
-      birthDate: db.asDay(body.birthDate),
-      age: body.age === undefined ? application.childAge : db.asInt(body.age),
-      course: db.asText(body.course, 120) || application.course,
-      group: db.asText(body.group, 80),
-      teacherId,
-      status: 'active',
-      startedAt: db.asDay(body.startedAt),
-      parentName: db.asText(body.parentName, 120) || application.parentName,
-      parentPhone: db.asText(body.parentPhone, 40) || application.phone,
-      parentEmail: db.asText(body.parentEmail, 120) || application.email,
-      lessonPrice: db.asMoney(body.lessonPrice),
-      adminNote: application.comment ? `Комментарий из заявки: ${application.comment}` : '',
-      applicationId: application.id,
-      traits: {},
+      const name = db.asText(body.name, 120) || application.childName;
+      if (!name) return { ok: false, errors: { name: 'Укажите имя ребёнка.' } };
+
+      // Данные переносятся из заявки; администратор может уточнить их прямо в окне конвертации.
+      const student = tx.students.insert({
+        name,
+        birthDate: db.asDay(body.birthDate),
+        age: body.age === undefined ? application.childAge : db.asInt(body.age),
+        course: db.asText(body.course, 120) || application.course,
+        group: db.asText(body.group, 80),
+        teacherId,
+        status: 'active',
+        startedAt: db.asDay(body.startedAt),
+        parentName: db.asText(body.parentName, 120) || application.parentName,
+        parentPhone: db.asText(body.parentPhone, 40) || application.phone,
+        parentEmail: db.asText(body.parentEmail, 120) || application.email,
+        lessonPrice: db.asMoney(body.lessonPrice),
+        adminNote: application.comment ? `Комментарий из заявки: ${application.comment}` : '',
+        applicationId: application.id,
+        traits: {},
+      });
+
+      const linked = tx.applications.update(application.id, (current) =>
+        applications.linkStudentChanges(current, student.id, req.user)
+      );
+
+      return { ok: true, student, item: linked };
     });
 
-    await applications.linkStudent(application.id, student.id, req.user);
+    if (!result.ok) {
+      return result.errors ? failValidation(res, result.errors) : fail(res, result.status, result.message);
+    }
 
+    // Журнал и уведомление — уже после записи: они не критичны к гонке,
+    // а держать на них очередь записи незачем.
     await audit.log({
       entity: 'student',
-      entityId: student.id,
+      entityId: result.student.id,
       action: 'create',
       actor: req.user,
       comment: 'Карточка создана из заявки с сайта',
     });
 
-    if (teacherId) await notify.studentAssigned(student, teacherId);
+    if (teacherId) await notify.studentAssigned(result.student, teacherId);
 
-    return res.status(201).json({ ok: true, studentId: student.id, item: await applications.getById(application.id) });
+    return res.status(201).json({ ok: true, studentId: result.student.id, item: result.item });
   })
 );
 

@@ -53,13 +53,16 @@
     text-wrap: pretty;
   }
 
-  /* Единое кольцо фокуса на всём сайте */
+  /* Единое кольцо фокуса на всём сайте.
+     Цвет кольца зависит от фона: WCAG 1.4.11 требует контраста 3:1 к соседнему цвету.
+     Абрикос на светлом paper даёт всего 2.0:1 — на светлых секциях кольцо кобальтовое (6.1:1),
+     а на тёмных остаётся абрикосовым (9.1:1 к ink-800), где кобальт, наоборот, теряется. */
   :focus-visible {
-    @apply outline-none ring-2 ring-apricot ring-offset-2 ring-offset-paper;
+    @apply outline-none ring-2 ring-cobalt ring-offset-2 ring-offset-paper;
   }
 
   .on-ink :focus-visible {
-    @apply ring-offset-ink-800;
+    @apply ring-apricot ring-offset-ink-800;
   }
 
   /* Цифры в таблицах и метриках — моноширинные по ширине */
@@ -208,8 +211,14 @@
     @apply border-red-500 focus:border-red-500 focus:ring-red-500/25;
   }
 
+  /* red-500 давал на белом только 3.76:1 — ниже нормы 4.5:1 для мелкого текста.
+     На тёмном фоне тот же red-600 читается хуже светлого, поэтому там свой оттенок. */
   .field-error {
-    @apply mt-1.5 hidden text-sm text-red-500;
+    @apply mt-1.5 hidden text-sm text-red-600;
+  }
+
+  .on-ink .field-error {
+    @apply text-red-400;
   }
 
   .field-error.is-shown {

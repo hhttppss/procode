@@ -70,6 +70,22 @@ function readFlag(key) {
   return ['1', 'true', 'yes', 'on'].includes(String(read(key, '')).toLowerCase());
 }
 
+/**
+ * Часовой пояс процесса.
+ *
+ * Все границы «сегодня», «эта неделя», «этот месяц» считаются от new Date(), то есть
+ * в поясе процесса. На машине разработчика это Москва, а VPS и контейнеры почти всегда
+ * живут в UTC — после деплоя дашборд, подсветка «сегодня» в расписании и периоды
+ * начислений уезжали бы на три часа назад.
+ *
+ * Значение присваивается здесь, а не префиксом в npm-скрипте: `TZ=… node …` работает
+ * в POSIX-оболочке, но не в cmd.exe, а проект должен запускаться и под Windows.
+ * Node пересчитывает пояс при записи в process.env.TZ, поэтому config подключается
+ * первым — до модулей, которые обращаются к датам.
+ */
+const timezone = read('TZ', 'Europe/Moscow');
+process.env.TZ = timezone;
+
 const port = Number.parseInt(read('PORT', '3000'), 10) || 3000;
 const adminLogin = read('ADMIN_LOGIN', 'admin');
 const adminPassword = read('ADMIN_PASSWORD', DEFAULT_PASSWORD);
@@ -104,6 +120,7 @@ function printWarnings() {
 module.exports = {
   rootDir: ROOT_DIR,
   port,
+  timezone,
   adminLogin,
   adminPassword,
   sessionSecret,

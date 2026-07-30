@@ -167,9 +167,10 @@ function renderPayroll() {
       const button = h('button', {
         class: done ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm',
         attrs: { type: 'button' },
+        dataset: { labelIdle: done ? 'Начислено' : 'Начислить', labelLoading: 'Начисляем…' },
         props: { disabled: done || row.amount <= 0 },
         text: done ? 'Начислено' : 'Начислить',
-        on: { click: () => createPayroll(row) },
+        on: { click: () => createPayroll(row, button) },
       });
 
       return h('tr', {}, [
@@ -184,17 +185,22 @@ function renderPayroll() {
   );
 }
 
-async function createPayroll(row) {
+async function createPayroll(row, button) {
   if (!window.confirm(`Начислить ${formatMoney(row.amount)} преподавателю «${row.name}» за период ${formatDay(period.from)} — ${formatDay(period.to)}?`)) {
     return;
   }
 
+  // Кнопка блокируется на время запроса: без этого второй клик успевал уйти на сервер
+  // раньше, чем таблица перерисуется, и начисление проводилось дважды.
+  setButtonLoading(button, true);
+
   try {
     await api('/finance/payroll', { method: 'POST', body: { teacherId: row.teacherId, from: period.from, to: period.to } });
     toast('Начисление записано в расходы');
-    await load();
+    await load(); // строка перерисуется целиком — возвращать кнопку в исходный вид не нужно
   } catch (error) {
     toast(error.message, 'error');
+    setButtonLoading(button, false);
   }
 }
 

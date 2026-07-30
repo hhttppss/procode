@@ -121,13 +121,35 @@ async function applyChanges(id, { status, managerComment }, actor) {
   });
 }
 
-/** Отмечает заявку как превращённую в карточку ученика. */
-async function linkStudent(id, studentId, actor) {
-  return store.update(id, (current) => ({
+/**
+ * Патч «заявка превращена в карточку ученика».
+ * Не функция записи, а именно набор изменений: конвертация идёт транзакцией сразу
+ * по двум коллекциям (см. POST /:id/convert), а внутри транзакции методы модели
+ * вызывать нельзя — очередь одна на все коллекции.
+ */
+function linkStudentChanges(current, studentId, actor) {
+  return {
     studentId,
     status: 'enrolled',
     history: appendHistory(current, historyEntry(actor, 'convert', 'Заявка превращена в карточку ученика')),
-  }));
+  };
+}
+
+/**
+ * Патч «карточку ученика удалили» — обратная сторона linkStudentChanges.
+ * Оставить заявке статус «Ученик зачислен» нельзя: ученика больше нет, а ссылка
+ * на удалённую карточку навсегда закрыла бы повторную конвертацию. Возвращаем
+ * заявку в работу — не в «Новую», чтобы она не притворялась свежим обращением.
+ */
+function unlinkStudentChanges(current, actor) {
+  return {
+    studentId: '',
+    status: 'processing',
+    history: appendHistory(
+      current,
+      historyEntry(actor, 'unlink', 'Карточка ученика удалена — заявка возвращена в работу')
+    ),
+  };
 }
 
 /** Сколько заявок пришло за период (для дашборда). */
@@ -178,6 +200,7 @@ module.exports = {
   remove: store.remove,
   replaceAll: store.replaceAll,
   applyChanges,
-  linkStudent,
+  linkStudentChanges,
+  unlinkStudentChanges,
   countCreatedBetween,
 };

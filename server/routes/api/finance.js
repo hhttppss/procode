@@ -315,26 +315,33 @@ router.post(
       });
     }
 
-    const already = await finance.expenses.filter(
-      (expense) =>
-        expense.category === 'payroll' &&
-        expense.teacherId === teacher.id &&
-        expense.periodFrom === period.from &&
-        expense.periodTo === period.to
-    );
-    if (already.length > 0) return fail(res, 409, 'За этот период начисление уже проведено.');
+    // Проверка «за этот период уже начисляли» и сама запись — одной транзакцией.
+    // Раздельными вызовами двойной клик по «Начислить» успевал провести оплату дважды.
+    // Занятия читаем до транзакции: в ней они не меняются.
+    const expense = await db.transaction(['expenses'], (tx) => {
+      const already = tx.expenses.filter(
+        (item) =>
+          item.category === 'payroll' &&
+          item.teacherId === teacher.id &&
+          item.periodFrom === period.from &&
+          item.periodTo === period.to
+      );
+      if (already.length > 0) return null;
 
-    const expense = await finance.expenses.create({
-      date: period.to,
-      amount,
-      category: 'payroll',
-      teacherId: teacher.id,
-      periodFrom: period.from,
-      periodTo: period.to,
-      lessonsCount: done.length,
-      comment: `${teacher.name}: ${done.length} занятий × ${teacher.rate} ₽`,
-      createdById: req.user.id,
+      return tx.expenses.insert({
+        date: period.to,
+        amount,
+        category: 'payroll',
+        teacherId: teacher.id,
+        periodFrom: period.from,
+        periodTo: period.to,
+        lessonsCount: done.length,
+        comment: `${teacher.name}: ${done.length} занятий × ${teacher.rate} ₽`,
+        createdById: req.user.id,
+      });
     });
+
+    if (!expense) return fail(res, 409, 'За этот период начисление уже проведено.');
 
     res.status(201).json({ ok: true, item: expense });
   })

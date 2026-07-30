@@ -12,6 +12,10 @@
  * Демо-преподаватели создаются с известными паролями — они нужны для проверки ролей.
  */
 
+// Первым — config: он выставляет process.env.TZ, а даты демо-данных считаются
+// от «сегодня» и должны попасть в тот же пояс, в котором их потом читает сервер.
+require('../server/config');
+
 const models = require('../server/models');
 const applications = require('../server/models/applications');
 const audit = require('../server/models/audit');
@@ -232,6 +236,24 @@ const DEMO_EXPENSES = [
   { daysAgo: 5, category: 'other', amount: 2500, comment: 'Канцелярия и распечатка методичек' },
 ];
 
+// ------------------------------------------------- проверка «уже сеяли»
+
+/**
+ * Заявки помечены source: 'demo', а у карточки ученика такого поля нет: она заводится
+ * и вручную, и из заявки, и лишнее служебное поле в ней ни к чему. Поэтому демо-ученика
+ * узнаём по паре «имя + дата рождения» — обе величины в списке заданы жёстко,
+ * и совпадение сразу двух у настоящего ученика можно не рассматривать.
+ */
+const DEMO_STUDENT_KEYS = new Set(DEMO_STUDENTS.map((demo) => `${demo.name}|${demo.birthDate}`));
+
+function countDemoApplications(items) {
+  return items.filter((item) => item.source === 'demo').length;
+}
+
+function countDemoStudents(items) {
+  return items.filter((student) => DEMO_STUDENT_KEYS.has(`${student.name}|${student.birthDate}`)).length;
+}
+
 // ------------------------------------------------------------------ сборка
 
 async function ensureTeachers() {
@@ -421,11 +443,38 @@ async function reset() {
   console.log('Рабочие данные очищены (учётные записи сохранены).');
 }
 
+/**
+ * Сообщение вместо повторного сева. Раньше скрипт молча дублировал всё, кроме
+ * преподавателей: в базе появлялось по два экземпляра каждого демо-ученика и заявки,
+ * а вместе с ними — вторые комплекты занятий, оплат и расходов.
+ */
+function reportAlreadySeeded(demoApplications, demoStudents) {
+  console.log('');
+  console.log('  Демо-данные уже есть в базе — повторно ничего не создаю.');
+  console.log(`  Нашлось: демо-заявок ${demoApplications}, демо-учеников ${demoStudents}.`);
+  console.log('  Занятия, оплаты и расходы завязаны на этих учеников, поэтому они тоже не создаются заново.');
+  console.log('');
+  console.log('  Нужен чистый комплект — пересоздайте его целиком:');
+  console.log('    npm run seed:reset');
+  console.log('  Команда очистит заявки, учеников, занятия, финансы, уведомления и историю');
+  console.log('  (учётные записи сотрудников останутся) и создаст демо-данные заново.');
+  console.log('');
+}
+
 async function main() {
   const shouldReset = process.argv.includes('--reset');
 
   await models.init();
   if (shouldReset) await reset();
+
+  // Проверяем до создания преподавателей: если демо-данные на месте, скрипт не должен
+  // трогать базу вообще — ни учётками, ни занятиями.
+  const demoApplications = countDemoApplications(await applications.list());
+  const demoStudents = countDemoStudents(await students.list());
+  if (demoApplications > 0 || demoStudents > 0) {
+    reportAlreadySeeded(demoApplications, demoStudents);
+    return;
+  }
 
   const admins = await users.listByRole('admin');
   const admin = admins.find((user) => user.active) || null;
@@ -463,7 +512,13 @@ async function main() {
   console.log('');
 }
 
-main().catch((error) => {
-  console.error('Не удалось создать демо-данные:', error.message);
-  process.exitCode = 1;
-});
+// Запуск только напрямую: при обычном require модуль отдаёт свои проверки наружу,
+// не трогая базу.
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('Не удалось создать демо-данные:', error.message);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { DEMO_APPLICATIONS, DEMO_STUDENTS, countDemoApplications, countDemoStudents };

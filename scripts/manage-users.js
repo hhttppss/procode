@@ -17,6 +17,10 @@
  * Повседневно преподавателей удобнее заводить в интерфейсе: /app/teachers.
  */
 
+// Первым — config: он выставляет process.env.TZ, иначе даты создания учёток
+// в списке печатались бы в поясе сервера, а не в том, в котором работает школа.
+require('../server/config');
+
 const lessons = require('../server/models/lessons');
 const models = require('../server/models');
 const notifications = require('../server/models/notifications');

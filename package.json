@@ -20,6 +20,7 @@
     "user:add": "node scripts/manage-users.js --add"
   },
   "dependencies": {
+    "compression": "^1.8.1",
     "express": "^4.21.2"
   },
   "devDependencies": {

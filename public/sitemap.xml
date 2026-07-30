@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Замените https://prokod.ru/ на реальный домен перед публикацией -->
+<!--
+  privacy.html и oferta.html здесь намеренно отсутствуют: на обеих стоит
+  <meta name="robots" content="noindex">, потому что пока это заглушки.
+  Верните их в карту сайта, когда появится настоящий текст документов
+  и с этих страниц снимут noindex.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://prokod.ru/</loc>
+    <lastmod>2026-07-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://prokod.ru/privacy.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://prokod.ru/oferta.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
   </url>
 </urlset>

@@ -12,6 +12,9 @@
 const express = require('express');
 
 const access = require('../../domain/access');
+// Заявку правим транзакцией по имени коллекции, но модуль нужен и сам по себе:
+// он объявляет коллекцию «applications» и знает, каким патчем разрывать связь.
+const applications = require('../../models/applications');
 const audit = require('../../models/audit');
 const catalog = require('../../domain/catalog');
 const db = require('../../db');
@@ -269,11 +272,15 @@ router.patch(
     if (!current) return fail(res, 404, 'Ученик не найден.');
 
     const { patch, errors } = readPatch(bodyOf(req));
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
     if (patch.teacherId && !(await ensureTeacherExists(patch.teacherId))) {
       errors.teacherId = 'Преподаватель не найден.';
     }
+
+    // Сначала ошибки, потом «нечего сохранять» — как в остальных модулях API.
+    // Неверные age и status в patch не попадают, поэтому обратный порядок отвечал
+    // «не переданы изменения» на запрос с единственным неправильным полем.
     if (Object.keys(errors).length > 0) return failValidation(res, errors);
+    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
 
     const updated = await students.update(current.id, patch);
     if (!updated) return fail(res, 404, 'Ученик не найден.');
@@ -322,7 +329,22 @@ router.delete(
     // Связанные данные убираем явно, иначе в расписании и отчётах останутся ссылки в никуда.
     await lessons.detachStudent(student.id);
     await finance.removePaymentsOfStudent(student.id);
-    await students.remove(student.id);
+
+    // Удаление карточки и разрыв связи с заявкой — одной транзакцией по двум коллекциям:
+    // заявка со ссылкой на удалённого ученика больше не конвертируется (её блокирует
+    // проверка «карточка уже создана»), а между двумя отдельными записями успевает
+    // пройти чужой запрос — и заявка осталась бы сиротой.
+    await db.transaction(['students', 'applications'], (tx) => {
+      tx.students.remove(student.id);
+
+      // Ищем по обратной ссылке, а не по student.applicationId: так находится и заявка,
+      // у которой связь проставлена только с её стороны.
+      const source = tx.applications.find((item) => item.studentId === student.id);
+      if (source) {
+        tx.applications.update(source.id, (current) => applications.unlinkStudentChanges(current, req.user));
+      }
+    });
+
     await audit.removeFor('student', student.id);
 
     res.json({ ok: true });
