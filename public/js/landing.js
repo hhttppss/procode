@@ -20,28 +20,96 @@
 
   // --------------------------------------------------------- мобильное меню
 
+  const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
+
+  /**
+   * Прячет содержимое страницы от клавиатуры и скринридера, пока открыто меню.
+   * Основной путь — inert (браузер сам убирает ветку из фокуса и из дерева доступности).
+   * Старым браузерам inert неизвестен: там гасим табуляцию вручную, запоминая прежний
+   * tabindex, чтобы вернуть его при закрытии.
+   */
+  function createIsolation(nodes) {
+    const supportsInert = 'inert' in HTMLElement.prototype;
+
+    function fallback(node, isolated) {
+      if (isolated) {
+        node.setAttribute('aria-hidden', 'true');
+        for (const item of node.querySelectorAll(FOCUSABLE)) {
+          if (item.dataset.menuTabindex === undefined) {
+            item.dataset.menuTabindex = item.getAttribute('tabindex') ?? '';
+          }
+          item.setAttribute('tabindex', '-1');
+        }
+        return;
+      }
+
+      node.removeAttribute('aria-hidden');
+      for (const item of node.querySelectorAll('[data-menu-tabindex]')) {
+        const previous = item.dataset.menuTabindex;
+        if (previous) item.setAttribute('tabindex', previous);
+        else item.removeAttribute('tabindex');
+        delete item.dataset.menuTabindex;
+      }
+    }
+
+    return (isolated) => {
+      for (const node of nodes) {
+        if (supportsInert) node.inert = isolated;
+        else fallback(node, isolated);
+      }
+    };
+  }
+
   function initMobileMenu() {
     const burger = document.getElementById('burger');
     const menu = document.getElementById('mobileMenu');
     if (!burger || !menu) return;
+
+    // Шапку не изолируем: логотип, кнопка «Попробовать бесплатно» и сам бургер
+    // остаются видимыми поверх меню, значит и доступными с клавиатуры.
+    const isolate = createIsolation(
+      [document.getElementById('main'), document.getElementById('contacts')].filter(Boolean)
+    );
+
+    const isOpen = () => !menu.classList.contains('hidden');
 
     const setOpen = (open) => {
       menu.classList.toggle('hidden', !open);
       burger.setAttribute('aria-expanded', String(open));
       burger.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
       document.body.classList.toggle('overflow-hidden', open);
+      isolate(open);
+
+      if (open) {
+        const firstLink = menu.querySelector('a[href]');
+        if (firstLink) firstLink.focus({ preventScroll: true });
+        return;
+      }
+
+      // Фокус возвращается на бургер: закрытое меню нельзя оставлять с фокусом
+      // на скрытой ссылке — он «проваливается» в body, и следующий Tab начинает
+      // обход страницы заново. Исключение делает сам браузер: если меню закрыл клик
+      // по пункту-якорю, переход к разделу переносит точку обхода к нему — так и нужно.
+      // preventScroll — чтобы не отменить эту прокрутку к якорю.
+      burger.focus({ preventScroll: true });
     };
 
-    burger.addEventListener('click', () => setOpen(menu.classList.contains('hidden')));
+    burger.addEventListener('click', () => setOpen(!isOpen()));
     menu.addEventListener('click', (event) => {
       if (event.target.closest('a')) setOpen(false);
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !menu.classList.contains('hidden')) {
-        setOpen(false);
-        burger.focus();
-      }
+      if (event.key === 'Escape' && isOpen()) setOpen(false);
     });
+
+    // На широком экране меню скрыто правилом lg:hidden, но изоляция осталась бы включённой
+    // и страница стала бы недоступной. Поворот планшета закрывает меню принудительно.
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const onDesktop = (event) => {
+      if (event.matches && isOpen()) setOpen(false);
+    };
+    if (typeof desktop.addEventListener === 'function') desktop.addEventListener('change', onDesktop);
+    else desktop.addListener(onDesktop);
   }
 
   // ------------------------------------------------- переключатели вкладок

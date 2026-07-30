@@ -10,6 +10,13 @@ import { api, byId, formatRelative, h, isAdmin, toast } from './core.js';
 const POLL_INTERVAL_MS = 30000;
 
 /**
+ * Событие общего опроса. Один таймер на страницу: по нему обновляются и колокольчик,
+ * и списки модулей (например, таблица заявок) — чтобы новые данные появлялись
+ * без второго независимого интервала и без перезагрузки страницы.
+ */
+export const POLL_EVENT = 'crm:poll';
+
+/**
  * Элементы с data-admin-only лежат в разметке скрытыми и показываются только администратору.
  * Это удобство, а не защита: соответствующие запросы к API преподавателю всё равно вернут 403.
  */
@@ -189,9 +196,20 @@ function initNotifications() {
   });
 
   load();
-  // Опрос вместо постоянного соединения: нагрузка мизерная, а кода и зависимостей — ноль.
+  document.addEventListener(POLL_EVENT, load);
+}
+
+// ------------------------------------------------------------------- опрос
+
+/**
+ * Опрос вместо постоянного соединения: нагрузка мизерная, а кода и зависимостей — ноль.
+ * Таймер живёт отдельно от колокольчика, потому что на него подписаны и страницы:
+ * страница без колокольчика всё равно должна обновляться.
+ */
+function initPolling() {
   setInterval(() => {
-    if (document.visibilityState === 'visible') load();
+    if (document.visibilityState !== 'visible') return;
+    document.dispatchEvent(new CustomEvent(POLL_EVENT));
   }, POLL_INTERVAL_MS);
 }
 
@@ -199,3 +217,4 @@ applyRoleVisibility();
 initNav();
 initLogout();
 initNotifications();
+initPolling();

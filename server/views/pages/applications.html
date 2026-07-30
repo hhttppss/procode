@@ -4,16 +4,25 @@
 
   <form id="filters" class="panel p-4 sm:p-5" role="search">
     <div class="grid gap-3 lg:grid-cols-12">
-      <div class="lg:col-span-4">
+      <div class="lg:col-span-3">
         <label class="field" for="filterSearch">
           <span class="field-label">Поиск</span>
           <input id="filterSearch" name="q" type="search" class="field-input" placeholder="Имя, телефон, направление…" autocomplete="off" />
         </label>
       </div>
-      <div class="lg:col-span-3">
+      <div class="lg:col-span-2">
         <label class="field" for="filterStatus">
           <span class="field-label">Статус</span>
           <select id="filterStatus" name="status" class="field-input"></select>
+        </label>
+      </div>
+      <div class="lg:col-span-2">
+        <label class="field" for="filterSort">
+          <span class="field-label">Сортировка</span>
+          <select id="filterSort" name="sort" class="field-input">
+            <option value="new">Сначала новые</option>
+            <option value="old">Сначала старые</option>
+          </select>
         </label>
       </div>
       <div class="lg:col-span-2">

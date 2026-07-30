@@ -17,11 +17,25 @@ const notify = require('../../domain/notify');
 // но модуль всё равно нужен: именно он объявляет коллекцию «students».
 require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, dayBoundsMs, bodyOf } = require('./helpers');
+const { wrap, fail, failValidation, dayBoundsMs, bodyOf, patchRejected } = require('./helpers');
 
 const router = express.Router();
 
 const MAX_QUERY_LENGTH = 100;
+
+/**
+ * Потолок выдачи списка. Заявки — единственная коллекция, которая растёт без конца:
+ * учеников и сотрудников ограничивает размер школы, история и уведомления обрезаются
+ * в моделях, а занятия запрашиваются диапазоном дат. Здесь же за несколько лет
+ * набегут тысячи записей, и без потолка их тянул бы каждый заход на страницу,
+ * да ещё и фоновое обновление раз в 30 секунд.
+ *
+ * Полноценная пагинация со страницами тут была бы лишней: администратор работает
+ * со свежими заявками, а старые ищет поиском и фильтром по датам — они уже есть.
+ * Поэтому просто отдаём свежие 200 и честно говорим в интерфейсе, что показано не всё.
+ * Выгрузка в CSV не ограничена: это и есть способ забрать вообще всё.
+ */
+const LIST_LIMIT = 200;
 
 // ------------------------------------------------------------ фильтры списка
 
@@ -92,8 +106,9 @@ router.get(
 
     res.json({
       ok: true,
-      items: selected,
+      items: selected.slice(0, LIST_LIMIT),
       total: selected.length,
+      limited: selected.length > LIST_LIMIT,
       counts: countByStatus(items),
     });
   })
@@ -132,8 +147,7 @@ router.patch(
       }
     }
 
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (patchRejected(res, errors, patch)) return;
 
     const current = await applications.getById(req.params.id);
     if (!current) return fail(res, 404, 'Заявка не найдена.');

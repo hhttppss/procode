@@ -56,7 +56,7 @@ function renderTiles() {
   byId('tiles').replaceChildren(
     tile('Доход', formatMoney(totals.income), `${totals.payments} ${totals.payments === 1 ? 'оплата' : 'оплат'}`),
     tile('Расход', formatMoney(totals.expense)),
-    tile('Прибыль', formatMoney(totals.profit), '', totals.profit < 0 ? 'text-red-600' : 'text-mint-600'),
+    tile('Прибыль', formatMoney(totals.profit), '', totals.profit < 0 ? 'text-red-600' : 'text-mint-700'),
     tile('Проведено занятий', String(totals.lessonsDone), `Всего в расписании: ${totals.lessonsTotal}`)
   );
 }
@@ -292,7 +292,7 @@ function renderLessonReport() {
       h('tr', { class: 'row-clickable', on: { click: () => (window.location.href = `/app/teachers/${row.teacherId}`) } }, [
         h('td', { class: 'font-medium', text: row.name }),
         h('td', { class: 'tnum', text: String(row.total) }),
-        h('td', { class: 'tnum text-mint-600', text: String(row.done) }),
+        h('td', { class: 'tnum text-mint-700', text: String(row.done) }),
         h('td', { class: 'tnum text-muted', text: String(row.cancelled) }),
       ])
     )

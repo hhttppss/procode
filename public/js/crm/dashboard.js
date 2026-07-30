@@ -142,8 +142,8 @@ function renderAdmin(data) {
     panel(
       'Финансы за период',
       h('dl', { class: 'space-y-3' }, [
-        moneyRow('Доход', data.finance.income, 'text-mint-600'),
-        moneyRow('Расход', data.finance.expense, 'text-apricot-600'),
+        moneyRow('Доход', data.finance.income, 'text-mint-700'),
+        moneyRow('Расход', data.finance.expense, 'text-apricot-700'),
         moneyRow('Прибыль', data.finance.profit, data.finance.profit < 0 ? 'text-red-600' : ''),
       ]),
       { href: '/app/finance', label: 'Подробно' }

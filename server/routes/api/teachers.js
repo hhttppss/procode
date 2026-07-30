@@ -14,7 +14,7 @@ const lessons = require('../../models/lessons');
 const notifications = require('../../models/notifications');
 const students = require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, bodyOf, readPeriod } = require('./helpers');
+const { wrap, fail, failValidation, bodyOf, fieldsOf, patchRejected, readPeriod } = require('./helpers');
 
 const router = express.Router();
 
@@ -170,7 +170,7 @@ router.patch(
     const body = bodyOf(req);
     const patch = {};
     const errors = {};
-    const has = (field) => Object.prototype.hasOwnProperty.call(body, field);
+    const has = fieldsOf(body);
 
     if (has('name')) {
       patch.name = db.asText(body.name, 120);
@@ -199,8 +199,7 @@ router.patch(
       }
     }
 
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (patchRejected(res, errors, patch)) return;
 
     const updated = await users.update(current.id, patch);
 

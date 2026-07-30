@@ -14,7 +14,7 @@ const db = require('../../db');
 const lessons = require('../../models/lessons');
 const students = require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, bodyOf, readPeriod } = require('./helpers');
+const { wrap, fail, failValidation, bodyOf, fieldsOf, patchRejected, readPeriod } = require('./helpers');
 
 const router = express.Router();
 
@@ -57,16 +57,16 @@ router.patch(
     const body = bodyOf(req);
     const patch = {};
     const errors = {};
+    const has = fieldsOf(body);
 
-    if (Object.prototype.hasOwnProperty.call(body, 'name')) {
+    if (has('name')) {
       patch.name = db.asText(body.name, 120);
       if (!patch.name) errors.name = 'Укажите ФИО.';
     }
-    if (Object.prototype.hasOwnProperty.call(body, 'phone')) patch.phone = db.asText(body.phone, 40);
-    if (Object.prototype.hasOwnProperty.call(body, 'email')) patch.email = db.asText(body.email, 120);
+    if (has('phone')) patch.phone = db.asText(body.phone, 40);
+    if (has('email')) patch.email = db.asText(body.email, 120);
 
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (patchRejected(res, errors, patch)) return;
 
     const updated = await users.update(req.user.id, patch);
     if (!updated) return fail(res, 404, 'Учётная запись не найдена.');

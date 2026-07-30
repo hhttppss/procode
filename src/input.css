@@ -202,8 +202,10 @@
            focus:border-cobalt focus:outline-none focus:ring-2 focus:ring-cobalt/25;
   }
 
+  /* Плейсхолдер — white/50: на фоне поля (white/6 поверх ink-700) это 4.68:1,
+     прежние 35 % давали 3.06:1 и на телефоне читались с трудом. */
   .on-ink .field-input {
-    @apply border-white/15 bg-white/[0.06] text-white placeholder:text-white/35
+    @apply border-white/15 bg-white/[0.06] text-white placeholder:text-white/50
            focus:border-apricot focus:ring-apricot/25;
   }
 
@@ -258,16 +260,19 @@
     @apply border-cobalt/25 bg-cobalt-100 text-cobalt-700;
   }
 
+  /* Текст — mint-700: 600-й на bg-mint-100 давал 2.62:1 при норме 4.5:1. */
   .status-mint {
-    @apply border-mint/30 bg-mint-100 text-mint-600;
+    @apply border-mint/30 bg-mint-100 text-mint-700;
   }
 
+  /* Текст — apricot-700, а не 600: на светлой подложке бейджа 600 давал 2.33:1 при норме 4.5:1. */
   .status-apricot {
-    @apply border-apricot/40 bg-apricot-100 text-apricot-600;
+    @apply border-apricot/40 bg-apricot-100 text-apricot-700;
   }
 
+  /* red-600 на bg-red-50 — 4.41:1, чуть ниже нормы; red-700 даёт 5.91:1. */
   .status-red {
-    @apply border-red-200 bg-red-50 text-red-600;
+    @apply border-red-200 bg-red-50 text-red-700;
   }
 
   .status-violet {
@@ -573,8 +578,9 @@
     @apply mt-1 text-sm;
   }
 
+  /* red-700, а не 600: при наведении фон становится red-50, и на нём 600-й давал 4.41:1. */
   .btn-danger {
-    @apply border border-red-200 bg-white text-red-600 hover:border-red-300 hover:bg-red-50;
+    @apply border border-red-200 bg-white text-red-700 hover:border-red-300 hover:bg-red-50;
   }
 
   .link-inline {

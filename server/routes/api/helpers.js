@@ -20,6 +20,46 @@ function failValidation(res, errors) {
   return res.status(400).json({ ok: false, errors });
 }
 
+/** Один текст на все модули: PATCH без единого известного поля — это ошибка запроса, а не пустая правка. */
+const NOTHING_TO_SAVE = 'Нечего сохранять: не переданы изменения.';
+
+/**
+ * Есть ли поле в теле запроса. Именно hasOwnProperty, а не проверка на undefined:
+ * «стереть комментарий» приходит как { comment: '' }, а иногда и как { comment: null } —
+ * такие поля надо принимать, а не считать непереданными.
+ */
+function hasField(body, field) {
+  return Object.prototype.hasOwnProperty.call(body, field);
+}
+
+/** Читалка полей одного тела: const has = fieldsOf(body); if (has('name')) … */
+function fieldsOf(body) {
+  return (field) => hasField(body, field);
+}
+
+/**
+ * Общий финал разбора PATCH-запроса.
+ *
+ * Порядок проверок важен и одинаков во всех модулях: сначала ошибки полей, потом
+ * «нечего сохранять». Неверное значение в patch не попадает, поэтому обратный порядок
+ * отвечал бы «не переданы изменения» на запрос с единственным неправильным полем.
+ *
+ * @returns {boolean} true — ответ уже отправлен, обработчику нужно сразу выйти.
+ */
+function patchRejected(res, errors, patch) {
+  if (Object.keys(errors).length > 0) {
+    failValidation(res, errors);
+    return true;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    fail(res, 400, NOTHING_TO_SAVE);
+    return true;
+  }
+
+  return false;
+}
+
 /** Календарная дата YYYY-MM-DD в местном времени. */
 function today() {
   const now = new Date();
@@ -96,6 +136,10 @@ module.exports = {
   wrap,
   fail,
   failValidation,
+  NOTHING_TO_SAVE,
+  hasField,
+  fieldsOf,
+  patchRejected,
   today,
   toDay,
   shiftDay,

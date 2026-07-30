@@ -368,10 +368,15 @@ export function field({
   step = null,
 }) {
   const id = `f_${name}_${Math.random().toString(36).slice(2, 8)}`;
+  // Подпись ошибки и подсказка связываются с полем через aria-describedby:
+  // без этого скринридер читает «Имя ребёнка, поле ввода» и молчит о том, что не так.
+  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = hint ? `${hintId} ${errorId}` : errorId;
   let control;
 
   if (options) {
-    control = h('select', { class: 'field-input', attrs: { id, name } });
+    control = h('select', { class: 'field-input', attrs: { id, name, 'aria-describedby': describedBy } });
     for (const option of options) {
       control.append(
         h('option', {
@@ -384,19 +389,19 @@ export function field({
   } else if (type === 'textarea') {
     control = h('textarea', {
       class: 'field-input resize-y',
-      attrs: { id, name, rows: rows || 3, placeholder },
+      attrs: { id, name, rows: rows || 3, placeholder, 'aria-describedby': describedBy },
       props: { value: value ?? '' },
     });
   } else if (type === 'checkbox') {
     control = h('input', {
       class: 'h-5 w-5 rounded border-ink/25 accent-cobalt',
-      attrs: { id, name, type: 'checkbox' },
+      attrs: { id, name, type: 'checkbox', 'aria-describedby': describedBy },
       props: { checked: Boolean(value) },
     });
   } else {
     control = h('input', {
       class: 'field-input',
-      attrs: { id, name, type, placeholder },
+      attrs: { id, name, type, placeholder, 'aria-describedby': describedBy },
       props: { value: value ?? '' },
     });
     if (min !== null) control.min = min;
@@ -407,17 +412,28 @@ export function field({
   if (required) control.required = true;
   if (disabled) control.disabled = true;
 
+  // role="alert" на пустом блоке безвреден: скринридер озвучит его в тот момент,
+  // когда showFieldErrors положит туда текст.
+  const errorNode = h('p', {
+    class: 'field-error',
+    attrs: { id: errorId, role: 'alert' },
+    dataset: { errorFor: name },
+  });
+
   const wrapper =
     type === 'checkbox'
-      ? h('label', { class: `flex cursor-pointer items-center gap-3 text-sm ${className}`.trim() }, [
-          control,
-          h('span', { text: label }),
+      ? // Флажок обёрнут в контейнер, а не в один <label>: подпись ошибки должна вставать
+        // под строкой с флажком, а не превращаться в соседнюю колонку flex-раскладки.
+        h('div', { class: className }, [
+          h('label', { class: 'flex cursor-pointer items-center gap-3 text-sm' }, [control, h('span', { text: label })]),
+          hint ? h('p', { class: 'field-hint', attrs: { id: hintId }, text: hint }) : null,
+          errorNode,
         ])
       : h('label', { class: `field ${className}`.trim(), attrs: { for: id } }, [
           h('span', { class: 'field-label', text: label }),
           control,
-          hint ? h('p', { class: 'field-hint', text: hint }) : null,
-          h('p', { class: 'field-error', dataset: { errorFor: name } }),
+          hint ? h('p', { class: 'field-hint', attrs: { id: hintId }, text: hint }) : null,
+          errorNode,
         ]);
 
   wrapper.input = control;
@@ -460,6 +476,11 @@ export function readForm(root) {
 // --------------------------------------------------------- модальное окно
 
 let openModals = 0;
+
+/** Открыто ли сейчас модальное окно — фоновым обновлениям под ним делать нечего. */
+export function isModalOpen() {
+  return openModals > 0;
+}
 
 /**
  * Модальное окно. Возвращает { close, panel, body }.

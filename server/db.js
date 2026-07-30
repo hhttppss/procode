@@ -437,10 +437,32 @@ function asIsoDateTime(value, fallback = null) {
   return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
 }
 
-/** Календарная дата YYYY-MM-DD без времени и часового пояса. */
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isLeapYear(year) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Календарная дата YYYY-MM-DD без времени и часового пояса.
+ *
+ * Формата мало: ему одинаково соответствуют 2026-02-30 и 2026-13-01, а такая «дата»
+ * потом молча уезжала в занятие или в период отчёта. Поэтому день сверяется с календарём.
+ * Считаем сами, без new Date(): конструктор переносит лишние дни на следующий месяц
+ * (2026-02-30 → 2 марта) и по-своему трактует годы 0–99.
+ */
 function asDay(value) {
   const text = asText(value);
-  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return '';
+
+  const year = Number(text.slice(0, 4));
+  const month = Number(text.slice(5, 7));
+  const day = Number(text.slice(8, 10));
+
+  if (month < 1 || month > 12 || day < 1) return '';
+
+  const limit = month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
+  return day <= limit ? text : '';
 }
 
 /** Время HH:MM в 24-часовом формате. */

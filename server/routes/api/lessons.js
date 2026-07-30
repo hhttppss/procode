@@ -19,7 +19,18 @@ const lessons = require('../../models/lessons');
 const notify = require('../../domain/notify');
 const students = require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, bodyOf, today, toDay } = require('./helpers');
+const {
+  wrap,
+  fail,
+  failValidation,
+  bodyOf,
+  fieldsOf,
+  hasField,
+  patchRejected,
+  today,
+  toDay,
+  NOTHING_TO_SAVE,
+} = require('./helpers');
 
 const router = express.Router();
 
@@ -30,7 +41,7 @@ const MAX_SERIES_LESSONS = 200;
 async function validateLesson(body, { partial = false } = {}) {
   const errors = {};
   const value = {};
-  const has = (field) => Object.prototype.hasOwnProperty.call(body, field);
+  const has = fieldsOf(body);
 
   if (!partial || has('date')) {
     value.date = db.asDay(body.date);
@@ -256,20 +267,20 @@ router.patch(
           Object.entries(body).filter(([key]) => access.TEACHER_LESSON_FIELDS.includes(key))
         );
 
-    if (Object.keys(source).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (Object.keys(source).length === 0) return fail(res, 400, NOTHING_TO_SAVE);
 
     const { value, errors } = await validateLesson(source, { partial: true });
     const patch = {};
 
     for (const [key, val] of Object.entries(value)) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) patch[key] = val;
+      if (hasField(source, key)) patch[key] = val;
     }
 
-    if (Object.prototype.hasOwnProperty.call(source, 'teacherComment')) {
+    if (hasField(source, 'teacherComment')) {
       patch.teacherComment = db.asText(source.teacherComment, lessons.MAX_COMMENT);
     }
 
-    if (Object.prototype.hasOwnProperty.call(source, 'attendance')) {
+    if (hasField(source, 'attendance')) {
       const marks = source.attendance && typeof source.attendance === 'object' ? source.attendance : {};
       const studentIds = patch.studentIds || current.studentIds;
       const attendance = {};
@@ -279,8 +290,7 @@ router.patch(
       patch.attendance = attendance;
     }
 
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (patchRejected(res, errors, patch)) return;
 
     const updated = await lessons.update(current.id, patch);
     if (!updated) return fail(res, 404, 'Занятие не найдено.');

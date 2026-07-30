@@ -49,9 +49,9 @@ const ATTENDANCE = CATALOG.attendance || [];
 /** Классы перечислены буквально — иначе Tailwind не соберёт их в CSS. */
 const EVENT_CLASS = {
   planned: 'cal-event bg-cobalt-100 text-cobalt-700',
-  done: 'cal-event bg-mint-100 text-mint-600',
-  cancelled: 'cal-event bg-red-50 text-red-600 line-through',
-  moved: 'cal-event bg-apricot-100 text-apricot-600',
+  done: 'cal-event bg-mint-100 text-mint-700',
+  cancelled: 'cal-event bg-red-50 text-red-700 line-through',
+  moved: 'cal-event bg-apricot-100 text-apricot-700',
 };
 
 const query = new URLSearchParams(window.location.search);

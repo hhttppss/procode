@@ -5,7 +5,7 @@
  * и превращение заявки в карточку ученика.
  */
 
-import './shell.js';
+import { POLL_EVENT } from './shell.js';
 import {
   CATALOG,
   api,
@@ -17,6 +17,7 @@ import {
   formatDateTime,
   formatDay,
   h,
+  isModalOpen,
   kv,
   modalButton,
   openModal,
@@ -32,10 +33,16 @@ import {
 
 const STATUSES = CATALOG.applicationStatuses || [];
 
-const state = { status: 'all', q: '', from: '', to: '', sort: 'new' };
+const DEFAULT_STATE = { status: 'all', q: '', from: '', to: '', sort: 'new' };
+const MAX_QUERY_LENGTH = 100; // столько же принимает сервер (server/routes/api/applications.js)
+
+const state = { ...DEFAULT_STATE };
 
 let items = [];
 let counts = { all: 0 };
+// total — сколько заявок подошло под фильтр на сервере, limited — обрезал ли он выдачу.
+let total = 0;
+let limited = false;
 let teachers = [];
 let requestToken = 0;
 
@@ -49,6 +56,7 @@ const exportLink = byId('exportCsv');
 
 const searchInput = byId('filterSearch');
 const statusSelect = byId('filterStatus');
+const sortSelect = byId('filterSort');
 const fromInput = byId('filterFrom');
 const toInput = byId('filterTo');
 
@@ -69,7 +77,7 @@ function buildTiles() {
             click: () => {
               state.status = tile.id;
               statusSelect.value = tile.id;
-              load();
+              applyFilters();
             },
           },
         },
@@ -168,9 +176,14 @@ function render(errorMessage) {
     else stateBox.append(emptyBlock('Ничего не нашлось', 'Измените условия поиска или сбросьте фильтры.'));
   }
 
+  // Когда сервер обрезал выдачу, «из N» считаем по числу подошедших под фильтр,
+  // а не по всем заявкам: иначе непонятно, сколько ещё осталось за кадром.
+  const shown = `Показано ${items.length} ${plural(items.length, 'заявка', 'заявки', 'заявок')}`;
   summary.textContent = isEmpty
     ? ''
-    : `Показано ${items.length} ${plural(items.length, 'заявка', 'заявки', 'заявок')} из ${counts.all ?? items.length}`;
+    : limited
+      ? `${shown} из ${total} подходящих — уточните период или поиск, чтобы увидеть остальные`
+      : `${shown} из ${counts.all ?? items.length}`;
 
   exportLink.href = `/app/api/applications/export/csv?${toQuery(state)}`;
 }
@@ -184,12 +197,103 @@ async function load() {
 
     items = data.items || [];
     counts = data.counts || { all: items.length };
+    total = data.total ?? items.length;
+    limited = Boolean(data.limited);
     render();
   } catch (error) {
     if (token !== requestToken) return;
     items = [];
     render(error.message);
   }
+}
+
+// -------------------------------------------------------- фоновое обновление
+
+/** Слепок списка: по нему видно, изменилось ли что-нибудь на сервере. */
+function signature(list, tally, count) {
+  return `${tally ? tally.all : 0}|${count}|${list.map((item) => `${item.id}:${item.updatedAt}`).join(',')}`;
+}
+
+/**
+ * Обновление по общему таймеру оболочки (30 с): новая заявка появляется в таблице сама,
+ * а не только цифрой на колокольчике.
+ *
+ * Работа человека важнее свежести списка, поэтому обновление пропускается,
+ * когда открыта карточка или когда фокус стоит внутри таблицы (перерисовка
+ * уничтожила бы кнопку, на которой он стоит). Текст поиска, выбранные фильтры
+ * и прокрутка не трогаются: запрос идёт с тем же state, поля ввода не переписываются,
+ * а DOM обновляется только при реальных изменениях. Ошибка гасится молча —
+ * список на экране остаётся прежним, следующий тик повторит попытку.
+ */
+async function refreshQuietly() {
+  if (isModalOpen()) return;
+  if (listPanel.contains(document.activeElement)) return;
+
+  const token = ++requestToken;
+
+  try {
+    const data = await api('/applications', { query: state });
+    if (token !== requestToken) return;
+
+    const fresh = data.items || [];
+    const tally = data.counts || { all: fresh.length };
+    const freshTotal = data.total ?? fresh.length;
+    // Число подошедших входит в слепок: за потолком выдачи заявки тоже прибавляются,
+    // и строку «показано 200 из N» надо обновить, даже когда сама таблица не изменилась.
+    if (signature(fresh, tally, freshTotal) === signature(items, counts, total)) return;
+
+    items = fresh;
+    counts = tally;
+    total = freshTotal;
+    limited = Boolean(data.limited);
+    render();
+  } catch {
+    // Молча: фоновое обновление не должно показывать человеку ошибку поверх рабочего списка.
+  }
+}
+
+// ------------------------------------------------------------ адресная строка
+
+/**
+ * Фильтры живут в адресе: ссылку на «новые заявки за июль» можно отправить коллеге
+ * или оставить в закладках, а F5 не сбрасывает подбор.
+ * replaceState, а не pushState: кнопка «Назад» должна уводить со страницы,
+ * а не отматывать полтора десятка промежуточных состояний фильтра.
+ */
+function syncUrl() {
+  const search = toQuery({ ...state, sort: state.sort === DEFAULT_STATE.sort ? '' : state.sort }).toString();
+  window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}`);
+}
+
+/** Читает фильтры из адреса. Всё, что не проходит проверку, молча заменяется значением по умолчанию. */
+function readUrlState() {
+  const params = new URLSearchParams(window.location.search);
+
+  const status = params.get('status');
+  if (status === 'all' || STATUSES.some((item) => item.id === status)) state.status = status;
+
+  state.q = (params.get('q') || '').trim().slice(0, MAX_QUERY_LENGTH);
+
+  for (const key of ['from', 'to']) {
+    const value = params.get(key) || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) state[key] = value;
+  }
+
+  if (params.get('sort') === 'old') state.sort = 'old';
+}
+
+function applyStateToControls() {
+  searchInput.value = state.q;
+  statusSelect.value = state.status;
+  sortSelect.value = state.sort;
+  fromInput.value = state.from;
+  toInput.value = state.to;
+}
+
+/** Единая точка смены фильтров: адрес и список всегда обновляются вместе. */
+function applyFilters() {
+  syncUrl();
+  return load();
 }
 
 // ------------------------------------------------------------- карточка
@@ -406,33 +510,35 @@ function initFilters() {
   searchInput.addEventListener(
     'input',
     debounce(() => {
-      state.q = searchInput.value.trim();
-      load();
+      state.q = searchInput.value.trim().slice(0, MAX_QUERY_LENGTH);
+      applyFilters();
     }, 250)
   );
 
   statusSelect.addEventListener('change', () => {
     state.status = statusSelect.value;
-    load();
+    applyFilters();
+  });
+
+  sortSelect.addEventListener('change', () => {
+    state.sort = sortSelect.value === 'old' ? 'old' : 'new';
+    applyFilters();
   });
 
   fromInput.addEventListener('change', () => {
     state.from = fromInput.value;
-    load();
+    applyFilters();
   });
 
   toInput.addEventListener('change', () => {
     state.to = toInput.value;
-    load();
+    applyFilters();
   });
 
   byId('resetFilters').addEventListener('click', () => {
-    Object.assign(state, { status: 'all', q: '', from: '', to: '', sort: 'new' });
-    searchInput.value = '';
-    statusSelect.value = 'all';
-    fromInput.value = '';
-    toInput.value = '';
-    load();
+    Object.assign(state, DEFAULT_STATE);
+    applyStateToControls();
+    applyFilters();
   });
 
   byId('filters').addEventListener('submit', (event) => event.preventDefault());
@@ -444,6 +550,10 @@ async function init() {
   buildTiles();
   initFilters();
 
+  // Фильтры восстанавливаются до первого запроса: иначе список успел бы дважды моргнуть.
+  readUrlState();
+  applyStateToControls();
+
   try {
     const directory = await api('/directory');
     teachers = directory.teachers || [];
@@ -454,11 +564,15 @@ async function init() {
   await load();
 
   // Ссылка из уведомления вида /app/applications?id=… сразу открывает нужную заявку.
+  // Читается после загрузки списка и до первой правки адреса — syncUrl() уберёт id
+  // только когда человек сам тронет фильтры.
   const requestedId = new URLSearchParams(window.location.search).get('id');
   if (requestedId) {
     const found = items.find((item) => item.id === requestedId);
     if (found) openCard(found);
   }
+
+  document.addEventListener(POLL_EVENT, refreshQuietly);
 }
 
 init();

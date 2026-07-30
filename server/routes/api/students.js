@@ -23,7 +23,7 @@ const lessons = require('../../models/lessons');
 const notify = require('../../domain/notify');
 const students = require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, bodyOf } = require('./helpers');
+const { wrap, fail, failValidation, bodyOf, fieldsOf, patchRejected } = require('./helpers');
 
 const router = express.Router();
 
@@ -59,7 +59,7 @@ function traitsText(traits) {
 function readPatch(body) {
   const patch = {};
   const errors = {};
-  const has = (field) => Object.prototype.hasOwnProperty.call(body, field);
+  const has = fieldsOf(body);
 
   if (has('name')) {
     patch.name = db.asText(body.name, 120);
@@ -276,11 +276,7 @@ router.patch(
       errors.teacherId = 'Преподаватель не найден.';
     }
 
-    // Сначала ошибки, потом «нечего сохранять» — как в остальных модулях API.
-    // Неверные age и status в patch не попадают, поэтому обратный порядок отвечал
-    // «не переданы изменения» на запрос с единственным неправильным полем.
-    if (Object.keys(errors).length > 0) return failValidation(res, errors);
-    if (Object.keys(patch).length === 0) return fail(res, 400, 'Нечего сохранять: не переданы изменения.');
+    if (patchRejected(res, errors, patch)) return;
 
     const updated = await students.update(current.id, patch);
     if (!updated) return fail(res, 404, 'Ученик не найден.');
