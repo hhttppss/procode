@@ -6,7 +6,7 @@
   "type": "commonjs",
   "main": "server/index.js",
   "engines": {
-    "node": ">=18"
+    "node": ">=20 <21 || >=22"
   },
   "scripts": {
     "start": "node server/index.js",
@@ -16,10 +16,13 @@
     "build": "npm run css",
     "seed": "node scripts/seed-demo.js",
     "seed:reset": "node scripts/seed-demo.js --reset",
+    "seed:sqlite": "node scripts/seed-sqlite.js",
+    "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js",
     "users": "node scripts/manage-users.js --list",
     "user:add": "node scripts/manage-users.js --add"
   },
   "dependencies": {
+    "better-sqlite3": "^12.11.1",
     "compression": "^1.8.1",
     "express": "^4.21.2"
   },

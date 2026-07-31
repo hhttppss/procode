@@ -19,7 +19,7 @@
 
 // Первым — config: он выставляет process.env.TZ, иначе даты создания учёток
 // в списке печатались бы в поясе сервера, а не в том, в котором работает школа.
-require('../server/config');
+const config = require('../server/config');
 
 const lessons = require('../server/models/lessons');
 const models = require('../server/models');
@@ -91,7 +91,9 @@ async function main() {
       console.log(`  ${user.login}  —  ${user.name}`);
       console.log(`      ${role}, ${access}   создан: ${created}`);
     }
-    console.log(`\nФайл: ${users.file}`);
+    console.log(
+      `\nХранилище: ${config.databaseEngine === 'sqlite' ? config.sqliteStorage : users.file}`
+    );
     return;
   }
 

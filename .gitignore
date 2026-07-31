@@ -9,6 +9,11 @@ node_modules/
 # Runtime data (applications, users, corrupt-file backups)
 data/*.json
 
+# Runtime data: база SQLite и её служебные файлы журнала (WAL)
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+
 # Локальная инструкция с паролями учётных записей
 ЗАПУСК.md
 

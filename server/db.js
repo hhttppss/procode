@@ -1,21 +1,37 @@
 'use strict';
 
 /**
- * Движок хранения: одна JSON-коллекция = один файл в data/.
+ * Движок хранения данных. Одна «коллекция» — один набор записей (students, lessons…).
  *
- * Правила, унаследованные от первой версии проекта (заявки) и распространённые на все данные:
- *  • запись атомарная (временный файл + rename) — файл нельзя получить наполовину записанным;
- *  • все изменяющие операции выстроены в общую промис-очередь — параллельные запросы не затирают друг друга;
- *  • битый JSON не роняет сервер: файл уходит в карантин, работа продолжается с пустым списком;
- *  • чтение кэшируется по mtime файла — дашборд читает пять коллекций и не упирается в диск.
+ * Физически коллекции лежат в одном из двух хранилищ (DATABASE_ENGINE в .env):
+ *  • sqlite — таблица «id TEXT PRIMARY KEY, data TEXT» в data/app.sqlite (по умолчанию);
+ *  • json   — файл data/<коллекция>.json, как в первых версиях проекта.
  *
- * Очередь одна на все коллекции: операции на разных файлах не конфликтуют, но и не идут
- * настолько часто, чтобы последовательность стала узким местом. Зато нет шанса словить
- * гонку при связанных изменениях (например, «конвертировать заявку в ученика»).
+ * Наружу оба движка отдают один и тот же интерфейс: collection() и transaction().
+ * Модели, роуты и служебные скрипты о выборе хранилища не знают.
+ *
+ * Правила, общие для обоих движков:
+ *  • все изменяющие операции выстроены в общую промис-очередь — параллельные запросы
+ *    не затирают друг друга;
+ *  • запись коллекции целиком: наружу нельзя получить наполовину сохранённый список
+ *    (json — временный файл + rename, sqlite — транзакция);
+ *  • повреждённые данные не роняют сервер (json — файл уходит в карантин,
+ *    sqlite — нечитаемая строка пропускается с сообщением в лог);
+ *  • чтение кэшируется до ближайшего изменения хранилища — дашборд читает пять
+ *    коллекций и не упирается в диск.
+ *
+ * Очередь одна на все коллекции: операции на разных коллекциях не конфликтуют, но и не
+ * идут настолько часто, чтобы последовательность стала узким местом. Зато нет шанса
+ * словить гонку при связанных изменениях (например, «конвертировать заявку в ученика»).
  *
  * Очередь сериализует отдельные вызовы, но не связки «прочитать → проверить → записать»:
  * между двумя такими вызовами успевает пройти параллельный запрос. Для этого есть
  * transaction() — см. раздел «транзакции» ниже.
+ *
+ * Документ целиком (нормализованный объект записи) хранится одним JSON-значением,
+ * без разбора на колонки. Так сделано осознанно: filter/find/count принимают
+ * произвольные JS-предикаты, а не запросы — перевод их в SQL WHERE это отдельная
+ * задача, а не смена движка. Выборка и сортировка остаются в JS и не меняются.
  */
 
 const crypto = require('crypto');
@@ -24,7 +40,22 @@ const fsp = require('fs/promises');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
 
+const config = require('./config');
+
 const DATA_DIR = path.join(__dirname, '..', 'data');
+
+// Имя коллекции подставляется в путь файла и в SQL как имя таблицы (параметризовать
+// имена таблиц SQLite не умеет), поэтому список допустимых символов закрытый.
+const COLLECTION_NAME = /^[a-z][a-z0-9_]*$/;
+
+function assertCollectionName(name) {
+  if (typeof name !== 'string' || !COLLECTION_NAME.test(name)) {
+    throw new Error(
+      `Недопустимое имя коллекции «${name}»: разрешены строчные латинские буквы, цифры и подчёркивание, первый символ — буква.`
+    );
+  }
+  return name;
+}
 
 /** Уникальный идентификатор: время (для сортировки) + случайная часть (для уникальности). */
 function createId(prefix) {
@@ -61,7 +92,7 @@ function enqueue(task) {
   return result;
 }
 
-// ------------------------------------------------------------------ файлы
+// -------------------------------------------------------------- файловый движок
 
 async function quarantine(file, reason) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -89,6 +120,270 @@ async function writeFileAtomic(file, items) {
   }
 }
 
+/** Путь к файлу коллекции. Остаётся прежним и на sqlite — см. комментарий у collection(). */
+function fileOf(name) {
+  return path.join(DATA_DIR, `${assertCollectionName(name)}.json`);
+}
+
+/**
+ * Хранилище «коллекция = JSON-файл».
+ *
+ * Каждый файл пишется атомарно (временный файл + rename), но общего журнала на несколько
+ * файлов нет: если диск откажет между записями транзакции, часть изменений уцелеет.
+ */
+function createJsonBackend() {
+  async function ensure(name) {
+    const file = fileOf(name);
+    await fsp.mkdir(DATA_DIR, { recursive: true });
+    try {
+      await fsp.access(file);
+    } catch {
+      await writeFileAtomic(file, []);
+    }
+  }
+
+  /** Ключ кэша — отпечаток файла: правку JSON руками подхватываем без перезапуска сервера. */
+  function revision(name) {
+    try {
+      const stat = fs.statSync(fileOf(name));
+      return `${stat.mtimeMs}:${stat.size}`;
+    } catch {
+      return null;
+    }
+  }
+
+  async function readRows(name) {
+    const file = fileOf(name);
+    try {
+      const parsed = JSON.parse(await fsp.readFile(file, 'utf8'));
+      if (!Array.isArray(parsed)) throw new Error('ожидался массив записей');
+      return parsed;
+    } catch (error) {
+      if (error.code === 'ENOENT') return [];
+      await quarantine(file, error.message);
+      return [];
+    }
+  }
+
+  async function writeRows(name, rows) {
+    await writeFileAtomic(fileOf(name), rows);
+  }
+
+  /** Транзакция файлового движка: одно место в очереди, запись только тронутых коллекций. */
+  async function runTransaction(targets, session) {
+    const loaded = [];
+    for (const internals of targets) loaded.push(await internals.readAll());
+    session.load(loaded);
+
+    const result = await session.run();
+
+    // Сохраняем только тронутые коллекции и только после успешного обработчика:
+    // исключение внутри — правки остались в памяти и просто пропали вместе со scope.
+    for (const state of session.dirtyStates()) await state.internals.writeAll(state.items);
+
+    return result;
+  }
+
+  return { id: 'json', sync: false, ensure, revision, readRows, writeRows, runTransaction };
+}
+
+// --------------------------------------------------------------- движок sqlite
+
+/**
+ * Хранилище «коллекция = таблица (id, data)» в одном файле SQLite.
+ *
+ * Драйвер better-sqlite3 синхронный: чтение и запись возвращают результат сразу,
+ * без промисов. Благодаря этому транзакция по нескольким коллекциям целиком
+ * помещается в один BEGIN…COMMIT — при исключении откатываются все коллекции разом.
+ */
+function createSqliteBackend(file) {
+  let conn = null;
+  let tableExists = null;
+  const known = new Set(); // таблицы, существование которых уже подтверждено
+  const statements = new Map();
+
+  function connect() {
+    if (conn) return conn;
+
+    let Database;
+    try {
+      // Требуется внутри, а не наверху модуля: на движке json нативный драйвер не нужен.
+      Database = require('better-sqlite3');
+    } catch (error) {
+      throw new Error(
+        `Не удалось загрузить драйвер better-sqlite3 (${error.message}). ` +
+          'Выполните npm install. Если нативный модуль не собирается, временно переключитесь ' +
+          'на файловое хранилище: DATABASE_ENGINE=json в .env.'
+      );
+    }
+
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    conn = new Database(file);
+
+    // WAL: читатели не блокируют писателя, и база переживает падение процесса.
+    conn.pragma('journal_mode = WAL');
+    // NORMAL при WAL безопасен для отката транзакций и заметно экономит fsync.
+    conn.pragma('synchronous = NORMAL');
+    // Если файл занят другим процессом (запущен seed рядом с сервером) — подождать, а не падать.
+    conn.pragma('busy_timeout = 5000');
+
+    tableExists = conn.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?");
+    return conn;
+  }
+
+  function ensure(name) {
+    assertCollectionName(name);
+    if (known.has(name)) return;
+
+    connect().exec(`CREATE TABLE IF NOT EXISTS "${name}" (id TEXT PRIMARY KEY, data TEXT NOT NULL)`);
+    known.add(name);
+  }
+
+  function hasTable(name) {
+    if (known.has(name)) return true;
+
+    connect();
+    if (!tableExists.get(assertCollectionName(name))) return false;
+
+    known.add(name);
+    return true;
+  }
+
+  function prepared(name) {
+    let set = statements.get(name);
+    if (set) return set;
+
+    assertCollectionName(name);
+    const db = connect();
+    set = {
+      // rowid хранит порядок вставки — списки читаются в том же порядке, что и раньше.
+      select: db.prepare(`SELECT id, data FROM "${name}" ORDER BY rowid`),
+      insert: db.prepare(`INSERT INTO "${name}" (id, data) VALUES (?, ?)`),
+      clear: db.prepare(`DELETE FROM "${name}"`),
+    };
+    statements.set(name, set);
+    return set;
+  }
+
+  /**
+   * Ключ кэша. data_version меняется, когда в базу записал ДРУГОЙ процесс
+   * (например, запущенный рядом seed) — свои записи сбрасывают кэш сами.
+   */
+  function revision(name) {
+    if (!hasTable(name)) return null;
+    return `v${connect().pragma('data_version', { simple: true })}`;
+  }
+
+  function readRows(name) {
+    if (!hasTable(name)) return [];
+
+    const rows = [];
+    for (const row of prepared(name).select.all()) {
+      try {
+        rows.push(JSON.parse(row.data));
+      } catch (error) {
+        // Одна битая строка не должна прятать остальные записи коллекции.
+        console.error(`Запись ${row.id} коллекции «${name}» не читается (${error.message}) — пропущена.`);
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * Полная перезапись коллекции. Списки школьного масштаба (сотни записей) переписываются
+   * целиком: это ровно та же семантика, что у файлового движка, и не требует диффа.
+   * Вложенная транзакция превращается в SAVEPOINT, поэтому вызов изнутри runTransaction безопасен.
+   */
+  function writeRows(name, rows) {
+    const db = connect();
+    const write = db.transaction(() => {
+      ensure(name);
+      const { insert, clear } = prepared(name);
+      clear.run();
+
+      for (const item of rows) {
+        const id = item && typeof item.id === 'string' ? item.id : '';
+        if (!id) throw new Error(`Запись коллекции «${name}» без идентификатора — сохранить её нельзя.`);
+
+        try {
+          insert.run(id, JSON.stringify(item));
+        } catch (error) {
+          if (String(error.code || '').startsWith('SQLITE_CONSTRAINT')) {
+            throw new Error(`В коллекции «${name}» две записи с одним идентификатором «${id}».`);
+          }
+          throw error;
+        }
+      }
+    });
+
+    write();
+  }
+
+  function save(session) {
+    for (const state of session.dirtyStates()) state.internals.writeAllSync(state.items);
+  }
+
+  /**
+   * Транзакция sqlite: чтение коллекций, обработчик и запись «грязных» коллекций —
+   * один BEGIN…COMMIT. Исключение внутри обработчика откатывает изменения по всем
+   * коллекциям сразу, а не по одной, как это было у файлового движка.
+   *
+   * Обработчик обязан быть синхронным (как и везде в проекте сегодня — ни один вызов
+   * db.transaction() не передаёт async fn): better-sqlite3 не умеет ждать промис внутри
+   * своей транзакции. Более ранний вариант этого кода умел «откатить чтение и досчитать
+   * запись отдельным BEGIN» для async-обработчика, но между этими двумя транзакциями
+   * оставалось окно без блокировки — параллельная запись в ту же коллекцию потерялась бы
+   * молча (classic lost update), а комментарий рядом обещал полную атомарность. Ложная
+   * гарантия хуже явной ошибки, поэтому вместо неё — понятный отказ.
+   */
+  async function runTransaction(targets, session) {
+    const commit = connect().transaction(() => {
+      session.load(targets.map((internals) => internals.readAllSync()));
+
+      const result = session.run();
+      if (result && typeof result.then === 'function') {
+        throw new Error(
+          'db.transaction: обработчик вернул Promise — асинхронные обработчики транзакций ' +
+            'не поддерживаются на движке sqlite (see server/db.js: runTransaction).'
+        );
+      }
+
+      save(session);
+      return result;
+    });
+
+    return commit();
+  }
+
+  return { id: 'sqlite', sync: true, ensure, revision, readRows, writeRows, runTransaction };
+}
+
+const backend = config.databaseEngine === 'json' ? createJsonBackend() : createSqliteBackend(config.sqliteStorage);
+
+/**
+ * Путь, который видят разовые легаси-миграции моделей (users.js, applications.js) —
+ * они делают fsp.readFile(store.file, 'utf8') и, если содержимое похоже на структуру
+ * первой версии проекта, тихо переписывают текущее хранилище этим снимком
+ * (store.replaceAll(raw)).
+ *
+ * На движке json это ровно активный файл коллекции — миграция должна его видеть.
+ *
+ * На движке sqlite активное хранилище — таблица в data/app.sqlite, а на диске почти
+ * всегда остаётся нетронутый бэкап data/<name>.json (scripts/migrate-json-to-sqlite.js
+ * намеренно ничего в нём не меняет — это и есть путь отката). Если легаси-код увидит
+ * этот бэкап как «требующий обновления», он молча затрёт текущие данные sqlite снимком
+ * из бэкапа — вплоть до потери всего, что накопилось в приложении после переноса.
+ * Поэтому на sqlite здесь заведомо не существующий путь: чтение всегда падает ENOENT,
+ * и легаси-миграция безопасно ничего не делает — так и должно быть, раз данные уже
+ * перенесены и нормализованы.
+ */
+function legacyFileOf(name) {
+  if (backend.id === 'sqlite') {
+    return path.join(DATA_DIR, '.sqlite-legacy-disabled', `${assertCollectionName(name)}.json`);
+  }
+  return fileOf(name);
+}
+
 // ------------------------------------------------------------- коллекция
 
 /**
@@ -98,56 +393,59 @@ async function writeFileAtomic(file, items) {
  */
 const registry = new Map();
 
+const EMPTY_CACHE = { key: null, items: [] };
+
 /**
- * @param {string} name        имя файла без расширения (students → data/students.json)
+ * @param {string} name        имя коллекции (students → таблица students / data/students.json)
  * @param {object} options
  * @param {Function} options.normalize  приводит запись к ожидаемой форме; вернуть null — запись отбрасывается
  * @param {string}  options.prefix      префикс идентификаторов (st, ls, pm…)
  */
 function collection(name, { normalize, prefix } = {}) {
-  // Две коллекции с одним именем — это два независимых кэша над одним файлом:
+  assertCollectionName(name);
+
+  // Две коллекции с одним именем — это два независимых кэша над одними данными:
   // они будут затирать правки друг друга, поэтому такую ошибку ловим сразу.
   if (registry.has(name)) throw new Error(`Коллекция «${name}» уже объявлена.`);
 
-  const file = path.join(DATA_DIR, `${name}.json`);
+  const file = legacyFileOf(name);
   const toRecord = typeof normalize === 'function' ? normalize : (item) => item;
 
-  // Кэш живёт до изменения файла: правку JSON руками подхватываем без перезапуска сервера.
-  let cache = { key: null, items: [] };
+  // Кэш живёт до изменения хранилища.
+  let cache = EMPTY_CACHE;
 
-  function cacheKey() {
-    try {
-      const stat = fs.statSync(file);
-      return `${stat.mtimeMs}:${stat.size}`;
-    } catch {
-      return null;
-    }
+  function absorb(key, rows) {
+    const items = rows.map(toRecord).filter(Boolean);
+    cache = { key, items };
+    return items;
+  }
+
+  /** Синхронное чтение — только для синхронного движка (sqlite). Нужно транзакциям. */
+  function readAllSync() {
+    const key = backend.revision(name);
+    if (key === null) return [];
+    if (key === cache.key) return cache.items;
+    return absorb(key, backend.readRows(name));
   }
 
   async function readAll() {
-    const key = cacheKey();
+    if (backend.sync) return readAllSync();
+
+    const key = backend.revision(name);
     if (key === null) return [];
     if (key === cache.key) return cache.items;
+    return absorb(key, await backend.readRows(name));
+  }
 
-    try {
-      const raw = await fsp.readFile(file, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) throw new Error('ожидался массив записей');
-
-      const items = parsed.map(toRecord).filter(Boolean);
-      cache = { key, items };
-      return items;
-    } catch (error) {
-      if (error.code === 'ENOENT') return [];
-      await quarantine(file, error.message);
-      cache = { key: null, items: [] };
-      return [];
-    }
+  /** Синхронная запись — только для синхронного движка (sqlite). Нужно транзакциям. */
+  function writeAllSync(items) {
+    backend.writeRows(name, items);
+    cache = EMPTY_CACHE; // ключ пересчитается при следующем чтении
   }
 
   async function writeAll(items) {
-    await writeFileAtomic(file, items);
-    cache = { key: null, items: [] }; // ключ пересчитается при следующем чтении
+    await backend.writeRows(name, items);
+    cache = EMPTY_CACHE;
   }
 
   /** Копия списка — вызывающий код не должен менять кэш по ссылке. */
@@ -188,7 +486,7 @@ function collection(name, { normalize, prefix } = {}) {
     });
   }
 
-  /** Массовое создание одной записью в файл — для повторяющихся занятий. */
+  /** Массовое создание одной записью — для повторяющихся занятий. */
   async function createMany(list_) {
     return enqueue(async () => {
       const items = (await readAll()).slice();
@@ -250,19 +548,12 @@ function collection(name, { normalize, prefix } = {}) {
     });
   }
 
-  /** Создаёт файл, если его ещё нет. Вызывается один раз при старте сервера. */
+  /** Создаёт хранилище коллекции, если его ещё нет. Вызывается один раз при старте сервера. */
   async function init() {
-    await fsp.mkdir(DATA_DIR, { recursive: true });
-    try {
-      await fsp.access(file);
-    } catch {
-      await enqueue(() => writeAll([]));
-    }
+    await enqueue(() => backend.ensure(name));
   }
 
-  registry.set(name, { name, prefix, toRecord, readAll, writeAll });
-
-  return {
+  const api = {
     name,
     file,
     init,
@@ -277,6 +568,29 @@ function collection(name, { normalize, prefix } = {}) {
     remove,
     replaceAll,
   };
+
+  registry.set(name, { name, prefix, toRecord, readAll, writeAll, readAllSync, writeAllSync, api });
+
+  return api;
+}
+
+/**
+ * Уже объявленная коллекция по имени.
+ *
+ * Нужна служебным скриптам, которым требуется доступ ко всем коллекциям разом —
+ * в том числе к тем, чья модель не отдаёт наружу низкоуровневые методы
+ * (например, users не экспортирует replaceAll). В коде приложения не используется:
+ * там коллекция всегда приходит из своей модели.
+ */
+function collectionOf(name) {
+  const internals = registry.get(name);
+  if (!internals) throw new Error(`Коллекция «${name}» не объявлена.`);
+  return internals.api;
+}
+
+/** Имена всех объявленных на момент вызова коллекций — для скриптов вроде переноса данных. */
+function collectionNames() {
+  return [...registry.keys()];
 }
 
 // ------------------------------------------------------------- транзакции
@@ -352,6 +666,34 @@ function transactionScope(state) {
 }
 
 /**
+ * Ход транзакции, одинаковый для обоих движков: собрать scope из прочитанных записей,
+ * выполнить обработчик, отдать список тронутых коллекций. Чтением и записью занимается
+ * движок — он же решает, чем их обернуть.
+ */
+function openTransaction(names, targets, fn) {
+  const states = [];
+  const scope = {};
+
+  return {
+    /** @param {Array<Array<object>>} loaded записи коллекций в порядке targets */
+    load(loaded) {
+      targets.forEach((internals, index) => {
+        // slice() — копия массива: сам кэш менять нельзя, пока транзакция не завершилась.
+        const state = { internals, items: loaded[index].slice(), dirty: false };
+        states.push(state);
+        scope[internals.name] = transactionScope(state);
+      });
+    },
+    run() {
+      return transactionContext.run({ names }, () => fn(scope));
+    },
+    dirtyStates() {
+      return states.filter((state) => state.dirty);
+    },
+  };
+}
+
+/**
  * Транзакция уровня модуля: одна постановка в очередь на несколько коллекций.
  *
  * Зачем: методы коллекции сами встают в очередь, поэтому связка «прочитать → проверить →
@@ -362,13 +704,14 @@ function transactionScope(state) {
  * Внутри обработчика доступны только коллекции из scope: обычные методы моделей
  * (store.create и т. п.) снова встанут в очередь и получат ошибку из enqueue.
  *
- * Файлы пишутся по одному (каждый — атомарно, через временный файл и rename).
- * Общего журнала на несколько файлов нет: если диск откажет между записями, часть
- * изменений уцелеет. Для школьной базы это приемлемо, а вот гонка — нет.
+ * На sqlite чтение, обработчик и запись идут одним BEGIN…COMMIT: при исключении
+ * откатываются все коллекции разом. На json каждая коллекция пишется атомарно сама
+ * по себе, но общего журнала на несколько файлов нет — если диск откажет между
+ * записями, часть изменений уцелеет.
  *
  * @param {string[]} names  имена коллекций, к которым нужен доступ ('applications', 'students'…)
  * @param {(scope: Record<string, object>) => any} fn  вернуть можно что угодно — это станет результатом transaction
- * @returns {Promise<any>} результат fn; при исключении внутри fn файлы не меняются
+ * @returns {Promise<any>} результат fn; при исключении внутри fn данные не меняются
  */
 async function transaction(names, fn) {
   const targets = names.map((name) => {
@@ -377,27 +720,7 @@ async function transaction(names, fn) {
     return internals;
   });
 
-  return enqueue(async () => {
-    const states = [];
-    const scope = {};
-
-    for (const internals of targets) {
-      // slice() — копия массива: сам кэш менять нельзя, пока транзакция не завершилась.
-      const state = { internals, items: (await internals.readAll()).slice(), dirty: false };
-      states.push(state);
-      scope[internals.name] = transactionScope(state);
-    }
-
-    const result = await transactionContext.run({ names }, () => fn(scope));
-
-    // Сохраняем только тронутые коллекции и только после успешного fn:
-    // исключение внутри — правки остались в памяти и просто пропали вместе со scope.
-    for (const state of states) {
-      if (state.dirty) await state.internals.writeAll(state.items);
-    }
-
-    return result;
-  });
+  return enqueue(() => backend.runTransaction(targets, openTransaction(names, targets, fn)));
 }
 
 // ----------------------------------------------------------- общие утилиты
@@ -497,7 +820,10 @@ function oneOf(value, allowed, fallback) {
 
 module.exports = {
   dataDir: DATA_DIR,
+  engine: backend.id,
   collection,
+  collectionOf,
+  collectionNames,
   transaction,
   createId,
   enqueue,

@@ -90,6 +90,31 @@ const port = Number.parseInt(read('PORT', '3000'), 10) || 3000;
 const adminLogin = read('ADMIN_LOGIN', 'admin');
 const adminPassword = read('ADMIN_PASSWORD', DEFAULT_PASSWORD);
 
+/**
+ * Движок хранения данных.
+ *
+ * sqlite — рабочий режим: одна база data/app.sqlite, транзакции по нескольким
+ *          коллекциям выполняются целиком или не выполняются вовсе.
+ * json   — прежнее файловое хранилище (data/*.json). Запасной вариант для окружений,
+ *          где не встаёт нативный драйвер better-sqlite3.
+ *
+ * Программный интерфейс server/db.js у обоих режимов одинаковый: модели, роуты
+ * и скрипты о выборе движка не знают.
+ */
+const DATABASE_ENGINES = ['sqlite', 'json'];
+
+let databaseEngine = String(read('DATABASE_ENGINE', 'sqlite')).trim().toLowerCase();
+if (!DATABASE_ENGINES.includes(databaseEngine)) {
+  warnings.push(
+    `DATABASE_ENGINE=«${databaseEngine}» — неизвестный движок хранения. ` +
+      `Допустимые значения: ${DATABASE_ENGINES.join(', ')}. Используется sqlite.`
+  );
+  databaseEngine = 'sqlite';
+}
+
+// Относительный путь считается от корня проекта, абсолютный берётся как есть.
+const sqliteStorage = path.resolve(ROOT_DIR, read('SQLITE_STORAGE', path.join('data', 'app.sqlite')));
+
 let sessionSecret = read('SESSION_SECRET', '');
 if (!sessionSecret || sessionSecret === PLACEHOLDER_SECRET) {
   sessionSecret = crypto.randomBytes(32).toString('hex');
@@ -124,6 +149,8 @@ module.exports = {
   adminLogin,
   adminPassword,
   sessionSecret,
+  databaseEngine,
+  sqliteStorage,
   // Включайте TRUST_PROXY=1, только если сайт стоит за nginx/Caddy:
   // иначе клиент сможет подделать X-Forwarded-For и обойти лимиты по IP.
   trustProxy: readFlag('TRUST_PROXY'),
