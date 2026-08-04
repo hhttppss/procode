@@ -97,10 +97,7 @@ async function countByCourse() {
 
 /** Снимает закрепление за преподавателем — вызывается, когда сотрудника удаляют. */
 async function detachTeacher(teacherId) {
-  const affected = await listByTeacher(teacherId);
-  for (const student of affected) {
-    await store.update(student.id, { teacherId: '' });
-  }
+  const affected = await store.updateWhere((student) => student.teacherId === teacherId, { teacherId: '' });
   return affected.length;
 }
 

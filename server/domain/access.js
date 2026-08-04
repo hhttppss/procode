@@ -7,10 +7,20 @@
  * отсекаются здесь, до отправки ответа, — в JSON преподавателя контактов родителей
  * и ставок просто нет. Кнопки в интерфейсе — лишь отражение этих же правил.
  *
- * Правила:
- *   Администратор  — полный доступ ко всем модулям и полям.
- *   Преподаватель  — только свои ученики и своё расписание, без финансов,
- *                    без контактов родителей, без редактирования карточек.
+ * Роли:
+ *   Администратор     — полный доступ ко всем модулям и полям.
+ *   Управляющий школы — ежедневная работа: заявки, ученики, расписание, финансы.
+ *                       Модуль «Преподаватели» ему закрыт целиком: он не заводит
+ *                       учётные записи, не назначает преподавателя ученику и не
+ *                       настраивает ставки — всё, что касается сотрудников и денег,
+ *                       которые им платят, остаётся за администратором.
+ *   Преподаватель     — только свои ученики и своё расписание, без финансов,
+ *                       без контактов родителей, без редактирования карточек.
+ *                       Свой профиль и пароль он тоже не меняет — учётной записью
+ *                       полностью распоряжается администратор.
+ *
+ * Проверки написаны как возможности (canViewFinance, canEditStudent…), а не как сравнение
+ * с ролью: появление четвёртой роли меняет этот файл, а не два десятка обработчиков.
  */
 
 const students = require('../models/students');
@@ -19,11 +29,123 @@ function isAdmin(user) {
   return Boolean(user) && user.role === 'admin';
 }
 
+function isManager(user) {
+  return Boolean(user) && user.role === 'manager';
+}
+
 function isTeacher(user) {
   return Boolean(user) && user.role === 'teacher';
 }
 
+// ---------------------------------------------------------------- возможности
+
+/** Учётные записи сотрудников: создание, удаление, смена роли и пароля. */
+function canManageUsers(user) {
+  return isAdmin(user);
+}
+
+/** Ставка за занятие — часть договорённости с сотрудником, её меняет только администратор. */
+function canManageRates(user) {
+  return isAdmin(user);
+}
+
+/** Кто ведёт ученика — решение администратора: от этого зависят нагрузка и начисления. */
+function canAssignTeacher(user) {
+  return isAdmin(user);
+}
+
+function canManageApplications(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+function canViewAllStudents(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+/** Контакты родителей, стоимость занятия, заметки, оплаты и история правок карточки. */
+function canViewStudentDetails(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+function canEditStudent(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+function canViewAllLessons(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+/** Составление расписания: создание, перенос, правка чужих занятий, удаление. */
+function canManageLessons(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+function canViewFinance(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+/** Преподавателю профиль доступен только на чтение: ФИО и контакты правит администратор. */
+function canEditOwnProfile(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+/** Пароль преподавателю назначает администратор — так учётка не уходит из-под его контроля. */
+function canChangeOwnPassword(user) {
+  return isAdmin(user) || isManager(user);
+}
+
+/**
+ * Плоский набор флагов, который уезжает в браузер вместе со страницей.
+ * Интерфейс рисуется по нему — но это лишь отражение правил, описанных выше:
+ * каждый запрос к API проверяет права заново, независимо от того, что показано на экране.
+ */
+function clientPermissions(user) {
+  return {
+    canManageUsers: canManageUsers(user),
+    canManageRates: canManageRates(user),
+    canAssignTeacher: canAssignTeacher(user),
+    canManageApplications: canManageApplications(user),
+    canViewAllStudents: canViewAllStudents(user),
+    canViewStudentDetails: canViewStudentDetails(user),
+    canEditStudent: canEditStudent(user),
+    canViewAllLessons: canViewAllLessons(user),
+    canManageLessons: canManageLessons(user),
+    canViewFinance: canViewFinance(user),
+    canEditOwnProfile: canEditOwnProfile(user),
+    canChangeOwnPassword: canChangeOwnPassword(user),
+  };
+}
+
 // ------------------------------------------------------- учётные записи
+
+/**
+ * «Кроме этой учётной записи активных администраторов не осталось».
+ *
+ * Одна проверка на три операции, после которых в систему может стать некому войти:
+ * блокировка администратора, перевод его в другую роль и удаление учётки. Запасной
+ * вход по ADMIN_LOGIN/ADMIN_PASSWORD здесь не спасает — он включается, только когда
+ * учётных записей не осталось вовсе (см. auth.checkCredentials), а управляющие
+ * и преподаватели в базе остаются.
+ *
+ * Собственный признак active у цели намеренно не учитывается: заблокированный
+ * администратор — тоже единственный, и последнюю учётную запись с этой ролью терять
+ * нельзя. Через веб-интерфейс до этой ветки не дойти — если активных администраторов
+ * не осталось, выполнить запрос уже некому; работает она в CLI (scripts/manage-users.js),
+ * где команды «разблокировать» нет вовсе и доступ восстанавливают созданием нового
+ * администратора (--add).
+ *
+ * Функция синхронная и получает список готовым: её вызывают внутри транзакции,
+ * где проверка и изменение обязаны идти в одном месте очереди (см. server/db.js).
+ *
+ * @param {object[]} users список учётных записей — весь, включая проверяемую
+ * @param {string} targetUserId учётка, которую блокируют, разжалуют или удаляют
+ */
+function isLastActiveAdmin(users, targetUserId) {
+  const target = users.find((user) => user.id === targetUserId);
+  if (!isAdmin(target)) return false;
+
+  return !users.some((user) => user.id !== targetUserId && isAdmin(user) && user.active);
+}
 
 /** Данные о самом себе: пароль и служебные поля наружу не уходят никогда. */
 function selfProfile(user) {
@@ -75,8 +197,8 @@ function staffBrief(user) {
 
 // -------------------------------------------------------------- ученики
 
-/** Поля карточки ученика, доступные только администратору. */
-const ADMIN_ONLY_STUDENT_FIELDS = [
+/** Поля карточки ученика, закрытые от преподавателя. */
+const PRIVILEGED_STUDENT_FIELDS = [
   'parentName',
   'parentPhone',
   'parentEmail',
@@ -104,8 +226,8 @@ function studentFor(user, student) {
     startedAt: student.startedAt,
   };
 
-  if (isAdmin(user)) {
-    for (const field of ADMIN_ONLY_STUDENT_FIELDS) view[field] = student[field];
+  if (canViewStudentDetails(user)) {
+    for (const field of PRIVILEGED_STUDENT_FIELDS) view[field] = student[field];
   }
 
   return view;
@@ -114,13 +236,8 @@ function studentFor(user, student) {
 /** Преподаватель видит только закреплённых за ним учеников. */
 function canViewStudent(user, student) {
   if (!student) return false;
-  if (isAdmin(user)) return true;
+  if (canViewAllStudents(user)) return true;
   return isTeacher(user) && student.teacherId === user.id;
-}
-
-/** Редактировать карточки может только администратор. */
-function canEditStudent(user) {
-  return isAdmin(user);
 }
 
 // -------------------------------------------------------------- занятия
@@ -137,6 +254,7 @@ function lessonFor(user, lesson) {
     studentIds: lesson.studentIds,
     title: lesson.title,
     course: lesson.course,
+    group: lesson.group,
     format: lesson.format,
     link: lesson.link,
     status: lesson.status,
@@ -147,21 +265,16 @@ function lessonFor(user, lesson) {
     updatedAt: lesson.updatedAt,
   };
 
-  // Внутренняя пометка администратора преподавателю не показывается.
-  if (isAdmin(user)) view.adminComment = lesson.adminComment;
+  // Внутренняя пометка администрации преподавателю не показывается.
+  if (canManageLessons(user)) view.adminComment = lesson.adminComment;
 
   return view;
 }
 
 function canViewLesson(user, lesson) {
   if (!lesson) return false;
-  if (isAdmin(user)) return true;
+  if (canViewAllLessons(user)) return true;
   return isTeacher(user) && lesson.teacherId === user.id;
-}
-
-/** Создавать, переносить и удалять занятия может только администратор. */
-function canManageLessons(user) {
-  return isAdmin(user);
 }
 
 /**
@@ -172,25 +285,21 @@ const TEACHER_LESSON_FIELDS = ['status', 'teacherComment', 'attendance'];
 
 function canReportLesson(user, lesson) {
   if (!lesson) return false;
-  if (isAdmin(user)) return true;
+  if (canViewAllLessons(user)) return true;
   return isTeacher(user) && lesson.teacherId === user.id;
 }
 
-// -------------------------------------------------------------- финансы
-
-function canViewFinance(user) {
-  return isAdmin(user);
-}
+// ---------------------------------------------------------------- модули
 
 /** Список ролей, которым доступен модуль. Используется и для меню, и для проверок. */
 const MODULE_ACCESS = {
-  dashboard: ['admin', 'teacher'],
-  applications: ['admin'],
-  students: ['admin', 'teacher'],
+  dashboard: ['admin', 'manager', 'teacher'],
+  applications: ['admin', 'manager'],
+  students: ['admin', 'manager', 'teacher'],
   teachers: ['admin'],
-  schedule: ['admin', 'teacher'],
-  finance: ['admin'],
-  profile: ['admin', 'teacher'],
+  schedule: ['admin', 'manager', 'teacher'],
+  finance: ['admin', 'manager'],
+  profile: ['admin', 'manager', 'teacher'],
 };
 
 function canOpenModule(user, moduleName) {
@@ -200,20 +309,32 @@ function canOpenModule(user, moduleName) {
 
 module.exports = {
   isAdmin,
+  isManager,
   isTeacher,
+  canManageUsers,
+  canManageRates,
+  canAssignTeacher,
+  canManageApplications,
+  canViewAllStudents,
+  canViewStudentDetails,
+  canEditStudent,
+  canViewAllLessons,
+  canManageLessons,
+  canViewFinance,
+  canEditOwnProfile,
+  canChangeOwnPassword,
+  clientPermissions,
+  isLastActiveAdmin,
   selfProfile,
   staffForAdmin,
   staffBrief,
   studentFor,
   canViewStudent,
-  canEditStudent,
-  ADMIN_ONLY_STUDENT_FIELDS,
+  PRIVILEGED_STUDENT_FIELDS,
   lessonFor,
   canViewLesson,
-  canManageLessons,
   canReportLesson,
   TEACHER_LESSON_FIELDS,
-  canViewFinance,
   MODULE_ACCESS,
   canOpenModule,
 };

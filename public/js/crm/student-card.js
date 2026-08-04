@@ -4,8 +4,8 @@
  * Карточка ученика.
  *
  * Блоки «Родители», «Оплаты» и «История» строятся только тогда, когда сервер прислал
- * соответствующие данные. Преподавателю он их не присылает — значит, у него этих блоков
- * нет вовсе, а не «скрыты стилями».
+ * соответствующие данные и у сотрудника есть право их видеть. Преподавателю сервер их
+ * не присылает — значит, у него этих блоков нет вовсе, а не «скрыты стилями».
  */
 
 import './shell.js';
@@ -14,7 +14,9 @@ import {
   PC,
   api,
   byId,
+  can,
   clear,
+  confirmModal,
   emptyBlock,
   field,
   formatAge,
@@ -23,7 +25,6 @@ import {
   formatDateTime,
   formatMoney,
   h,
-  isAdmin,
   kv,
   modalButton,
   openModal,
@@ -44,6 +45,10 @@ const ATTENDANCE = CATALOG.attendance || [];
 const root = byId('cardRoot');
 const stateBox = byId('stateBox');
 
+const canEditStudent = can('canEditStudent');
+const canViewDetails = can('canViewStudentDetails');
+const canViewFinance = can('canViewFinance');
+
 let data = null;
 let teachers = [];
 
@@ -57,40 +62,43 @@ function panel(title, body, actions = null) {
 }
 
 function header(student) {
-  const actions = [];
-
-  if (isAdmin) {
-    actions.push(
-      h('button', {
-        class: 'btn btn-primary btn-sm',
-        attrs: { type: 'button' },
-        text: 'Редактировать',
-        on: {
-          click: () =>
-            openStudentForm({
-              student,
-              teachers,
-              onSaved: async () => {
-                toast('Карточка обновлена');
-                await load();
-              },
-            }),
-        },
-      }),
-      h('button', {
-        class: 'btn btn-outline btn-sm',
-        attrs: { type: 'button' },
-        text: 'Добавить оплату',
-        on: { click: () => openPaymentForm(student) },
-      }),
-      h('button', {
-        class: 'btn btn-sm btn-danger',
-        attrs: { type: 'button' },
-        text: 'Удалить',
-        on: { click: () => removeStudent(student) },
-      })
-    );
-  }
+  // Правка и удаление карточки — одно право на запись, оплата — право на финансы.
+  const actions = [
+    canEditStudent
+      ? h('button', {
+          class: 'btn btn-primary btn-sm',
+          attrs: { type: 'button' },
+          text: 'Редактировать',
+          on: {
+            click: () =>
+              openStudentForm({
+                student,
+                teachers,
+                onSaved: async () => {
+                  toast('Карточка обновлена');
+                  await load();
+                },
+              }),
+          },
+        })
+      : null,
+    canViewFinance
+      ? h('button', {
+          class: 'btn btn-outline btn-sm',
+          attrs: { type: 'button' },
+          text: 'Добавить оплату',
+          on: { click: () => openPaymentForm(student) },
+        })
+      : null,
+    canEditStudent
+      ? h('button', {
+          class: 'btn btn-sm btn-danger',
+          attrs: { type: 'button' },
+          text: 'Удалить',
+          on: { click: () => removeStudent(student) },
+        })
+      : null,
+  ].filter(Boolean);
 
   return h('div', { class: 'panel p-5 sm:p-6' }, [
     h('div', { class: 'flex flex-wrap items-start justify-between gap-4' }, [
@@ -116,7 +124,7 @@ function mainInfo(student, teacher) {
       kv('Группа', student.group || '—'),
       kv('Преподаватель', teacher ? teacher.name : 'не назначен'),
       kv('Начало занятий', student.startedAt ? formatDay(student.startedAt) : '—'),
-      isAdmin ? kv('Стоимость занятия', student.lessonPrice ? formatMoney(student.lessonPrice) : '—') : null,
+      canViewDetails ? kv('Стоимость занятия', student.lessonPrice ? formatMoney(student.lessonPrice) : '—') : null,
       kv('Карточка создана', formatDateTime(student.createdAt), { mono: true }),
     ].filter(Boolean))
   );
@@ -204,29 +212,54 @@ function attendanceBlock(stats, lessons, studentId) {
   const list =
     lessons.length === 0
       ? h('p', { class: 'mt-4 text-sm text-muted', text: 'Занятий пока не было.' })
-      : h('div', { class: 'table-scroll mt-4' }, [
-          h('table', { class: 'data-table min-w-[34rem]' }, [
-            h('thead', {}, h('tr', {}, [
-              h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Время' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Посещение' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Комментарий' }),
-            ])),
-            h(
-              'tbody',
-              {},
-              lessons.map((lesson) =>
-                h('tr', {}, [
-                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs', text: formatDay(lesson.date) }),
-                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs text-muted', text: timeRange(lesson.startTime, lesson.durationMin) }),
-                  h('td', {}, statusBadge(LESSON_STATUSES, lesson.status)),
-                  h('td', { class: 'text-sm text-muted', text: lesson.attendanceMark ? statusLabel(ATTENDANCE, lesson.attendanceMark) : '—' }),
-                  h('td', { class: 'max-w-[18rem] truncate text-sm text-muted', attrs: { title: lesson.teacherComment || '' }, text: lesson.teacherComment || '—' }),
-                ])
-              )
-            ),
+      : h('div', { class: 'mt-4' }, [
+          h('div', { class: 'table-scroll hidden lg:block' }, [
+            h('table', { class: 'data-table min-w-[34rem]' }, [
+              h('thead', {}, h('tr', {}, [
+                h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Время' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Посещение' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Комментарий' }),
+              ])),
+              h(
+                'tbody',
+                {},
+                lessons.map((lesson) =>
+                  h('tr', {}, [
+                    h('td', { class: 'whitespace-nowrap font-mono tnum text-xs', text: formatDay(lesson.date) }),
+                    h('td', { class: 'whitespace-nowrap font-mono tnum text-xs text-muted', text: timeRange(lesson.startTime, lesson.durationMin) }),
+                    h('td', {}, statusBadge(LESSON_STATUSES, lesson.status)),
+                    h('td', { class: 'text-sm text-muted', text: lesson.attendanceMark ? statusLabel(ATTENDANCE, lesson.attendanceMark) : '—' }),
+                    h('td', { class: 'max-w-[18rem] truncate text-sm text-muted', attrs: { title: lesson.teacherComment || '' }, text: lesson.teacherComment || '—' }),
+                  ])
+                )
+              ),
+            ]),
           ]),
+          h(
+            'div',
+            { class: 'space-y-3 lg:hidden' },
+            lessons.map((lesson) =>
+              h('div', { class: 'tile' }, [
+                h('div', { class: 'flex items-start justify-between gap-3' }, [
+                  h('div', { class: 'min-w-0' }, [
+                    h('p', { class: 'font-display text-base font-semibold', text: formatDay(lesson.date) }),
+                    h('p', { class: 'mt-0.5 font-mono text-xs tnum text-muted', text: timeRange(lesson.startTime, lesson.durationMin) }),
+                  ]),
+                  statusBadge(LESSON_STATUSES, lesson.status),
+                ]),
+                h(
+                  'div',
+                  { class: 'mt-2 space-y-1 text-sm text-muted' },
+                  [
+                    h('p', { text: lesson.attendanceMark ? statusLabel(ATTENDANCE, lesson.attendanceMark) : 'Посещение не отмечено' }),
+                    lesson.teacherComment ? h('p', { text: lesson.teacherComment }) : null,
+                  ].filter(Boolean)
+                ),
+              ])
+            )
+          ),
         ]);
 
   const scheduleLink = h('a', {
@@ -247,12 +280,14 @@ function tile(label, value, hint) {
 }
 
 function paymentsBlock(payments, paid, student) {
-  const addButton = h('button', {
-    class: 'btn btn-outline btn-sm',
-    attrs: { type: 'button' },
-    text: 'Добавить оплату',
-    on: { click: () => openPaymentForm(student) },
-  });
+  const addButton = canViewFinance
+    ? h('button', {
+        class: 'btn btn-outline btn-sm',
+        attrs: { type: 'button' },
+        text: 'Добавить оплату',
+        on: { click: () => openPaymentForm(student) },
+      })
+    : null;
 
   const body =
     payments.length === 0
@@ -262,7 +297,7 @@ function paymentsBlock(payments, paid, student) {
             h('span', { class: 'text-muted', text: 'Оплачено всего: ' }),
             h('span', { class: 'font-display text-base font-semibold', text: formatMoney(paid) }),
           ]),
-          h('div', { class: 'table-scroll' }, [
+          h('div', { class: 'table-scroll hidden lg:block' }, [
             h('table', { class: 'data-table min-w-[30rem]' }, [
               h('thead', {}, h('tr', {}, [
                 h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
@@ -284,6 +319,22 @@ function paymentsBlock(payments, paid, student) {
               ),
             ]),
           ]),
+          h(
+            'div',
+            { class: 'space-y-3 lg:hidden' },
+            payments.map((payment) =>
+              h('div', { class: 'tile' }, [
+                h('div', { class: 'flex items-start justify-between gap-3' }, [
+                  h('div', { class: 'min-w-0' }, [
+                    h('p', { class: 'font-mono text-xs tnum text-muted', text: formatDay(payment.date) }),
+                    h('p', { class: 'mt-0.5 text-sm text-muted', text: statusLabel(CATALOG.paymentMethods || [], payment.method) }),
+                  ]),
+                  h('p', { class: 'shrink-0 font-display text-base font-semibold tnum', text: formatMoney(payment.amount) }),
+                ]),
+                payment.comment ? h('p', { class: 'mt-2 text-sm text-muted', text: payment.comment }) : null,
+              ])
+            )
+          ),
         ]);
 
   return panel('История оплат', body, addButton);
@@ -365,7 +416,7 @@ function openPaymentForm(student) {
 }
 
 async function removeStudent(student) {
-  if (!window.confirm(`Удалить карточку «${student.name}»? Занятия и оплаты по ней тоже будут удалены.`)) return;
+  if (!(await confirmModal(`Удалить карточку «${student.name}»? Занятия и оплаты по ней тоже будут удалены.`, { title: 'Удаление ученика' }))) return;
 
   try {
     await api(`/students/${encodeURIComponent(student.id)}`, { method: 'DELETE' });
@@ -385,11 +436,12 @@ function render() {
     header(student),
     mainInfo(student, teacher),
     traitsBlock(student),
-    // Эти поля приходят только администратору — у преподавателя блока просто нет.
+    // Эти поля приходят только тем, кто вправе видеть подробности карточки —
+    // у преподавателя блока просто нет.
     Object.prototype.hasOwnProperty.call(student, 'parentPhone') ? parentsBlock(student) : null,
     attendanceBlock(stats, lessons, student.id),
-    payments ? paymentsBlock(payments, paid, student) : null,
-    history ? historyBlock(history) : null,
+    payments && canViewDetails ? paymentsBlock(payments, paid, student) : null,
+    history && canViewDetails ? historyBlock(history) : null,
   ].filter(Boolean);
 
   root.replaceChildren(...blocks);
@@ -410,7 +462,9 @@ async function load() {
 }
 
 async function init() {
-  if (isAdmin) {
+  // Справочник нужен только форме правки: она показывает закрепление за преподавателем
+  // даже тому, кто его сменить не может.
+  if (canEditStudent) {
     try {
       const directory = await api('/directory');
       teachers = directory.teachers || [];

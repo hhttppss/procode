@@ -4,9 +4,13 @@
  * Занятия: data/lessons.json.
  *
  * Занятие может быть индивидуальным или групповым — отличие только в длине studentIds,
- * отдельной сущности «группа» нет: у ученика есть текстовое поле «группа», а занятие
- * просто ссылается на нескольких учеников. Для школы такого размера этого достаточно
- * и это не плодит связей, которые пришлось бы поддерживать вручную.
+ * отдельной сущности «группа» по-прежнему нет: у ученика есть текстовое поле «группа»,
+ * а занятие просто ссылается на нескольких учеников. Для школы такого размера этого
+ * достаточно и это не плодит связей, которые пришлось бы поддерживать вручную.
+ *
+ * У занятия тоже есть необязательное текстовое поле «группа» — то же самое значение,
+ * что и у ученика. Оно нужно, чтобы состав занятия подтягивался автоматически: выбрал
+ * группу — получил её учеников, а не отмечал каждого руками.
  *
  * Повторяющиеся занятия создаются пачкой и получают общий seriesId — чтобы серию
  * можно было удалить целиком.
@@ -54,6 +58,7 @@ function normalize(record) {
     studentIds,
     title: db.asText(record.title, 120),
     course: db.asText(record.course, 120),
+    group: db.asText(record.group, 80),
     format: db.oneOf(record.format, catalog.LESSON_FORMAT_IDS, 'online'),
     link: db.asText(record.link, 500),
     status: db.oneOf(record.status, catalog.LESSON_STATUS_IDS, catalog.DEFAULT_LESSON_STATUS),
@@ -107,31 +112,31 @@ async function listByStudent(studentId) {
   return (await store.filter((lesson) => lesson.studentIds.includes(studentId))).sort(byTime);
 }
 
+/** Удаляет серию целиком (или её хвост с fromDay) одной перезаписью коллекции. */
 async function removeSeries(seriesId, fromDay) {
   if (!seriesId) return 0;
 
-  const items = await store.filter(
-    (lesson) => lesson.seriesId === seriesId && (!fromDay || lesson.date >= fromDay)
-  );
-
-  for (const lesson of items) await store.remove(lesson.id);
-  return items.length;
+  return store.removeWhere((lesson) => lesson.seriesId === seriesId && (!fromDay || lesson.date >= fromDay));
 }
 
-/** Убирает ученика из всех занятий — когда карточку удаляют. */
+/**
+ * Убирает ученика из всех занятий — когда карточку удаляют.
+ * Патч свой для каждого занятия, поэтому вторым аргументом идёт функция от текущей записи.
+ */
 async function detachStudent(studentId) {
-  const items = await listByStudent(studentId);
+  const updated = await store.updateWhere(
+    (lesson) => lesson.studentIds.includes(studentId),
+    (lesson) => {
+      const attendance = { ...lesson.attendance };
+      delete attendance[studentId];
+      return {
+        studentIds: lesson.studentIds.filter((id) => id !== studentId),
+        attendance,
+      };
+    }
+  );
 
-  for (const lesson of items) {
-    const attendance = { ...lesson.attendance };
-    delete attendance[studentId];
-    await store.update(lesson.id, {
-      studentIds: lesson.studentIds.filter((id) => id !== studentId),
-      attendance,
-    });
-  }
-
-  return items.length;
+  return updated.length;
 }
 
 module.exports = {

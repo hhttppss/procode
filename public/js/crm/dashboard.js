@@ -1,9 +1,10 @@
 'use strict';
 
 /**
- * Главная страница. Одна разметка на две роли, но наборы блоков разные:
- * администратор видит сводку по школе, преподаватель — свои занятия и учеников.
- * Разделение делает сервер: /app/api/dashboard просто не присылает финансы преподавателю.
+ * Главная страница. Одна разметка на все роли, но наборы блоков разные:
+ * администратор и управляющий видят сводку по школе, преподаватель — свои занятия
+ * и учеников. Разделение делает сервер: /app/api/dashboard просто не присылает
+ * финансы преподавателю, а роль в ответе говорит, какую сводку рисовать.
  */
 
 import './shell.js';
@@ -12,6 +13,7 @@ import {
   USER,
   api,
   byId,
+  can,
   clear,
   emptyBlock,
   endOfMonth,
@@ -19,7 +21,6 @@ import {
   formatDayLong,
   formatMoney,
   h,
-  isAdmin,
   plural,
   shiftDay,
   shiftMonth,
@@ -78,8 +79,10 @@ function barList(rows, { valueFormat = String } = {}) {
     rows.map((row) =>
       h('li', {}, [
         h('div', { class: 'flex items-baseline justify-between gap-3' }, [
-          h('span', { class: 'truncate text-sm', text: row.label }),
-          h('span', { class: 'font-mono text-sm font-semibold tnum', text: valueFormat(row.value) }),
+          // min-w-0 обязателен: без него truncate не срабатывает — элемент flex
+          // не сжимается меньше своего текста, и длинное направление растягивает панель.
+          h('span', { class: 'min-w-0 truncate text-sm', attrs: { title: row.label }, text: row.label }),
+          h('span', { class: 'shrink-0 font-mono text-sm font-semibold tnum', text: valueFormat(row.value) }),
         ]),
         h(
           'div',
@@ -94,14 +97,27 @@ function barList(rows, { valueFormat = String } = {}) {
   );
 }
 
-// ------------------------------------------------------------ администратор
+// ------------------------------------------ сводка по школе (админ, управляющий)
 
 function renderAdmin(data) {
+  // Плитка «Преподаватели» ведёт в модуль учётных записей — управляющему он закрыт,
+  // поэтому у него на её месте ничего нет, а не ссылка в 403.
+  // Сетку подгоняем под число плиток: три штуки в четырёх колонках оставляли
+  // на широком экране пустую четверть ряда. Классы записаны целиком — Tailwind
+  // ищет их в тексте исходника и склеенное имя не увидит.
+  tilesRoot.className = can('canManageUsers')
+    ? 'grid grid-cols-2 gap-3 lg:grid-cols-4'
+    : 'grid grid-cols-2 gap-3 lg:grid-cols-3';
+
   tilesRoot.replaceChildren(
-    tile('Учеников всего', data.students.total, `Активных: ${data.students.byStatus.active || 0}`, '/app/students'),
-    tile('Новых заявок', data.applications.period, `Не обработано: ${data.applications.new}`, '/app/applications'),
-    tile('Преподавателей', data.teachers.total, `Доступ открыт: ${data.teachers.active}`, '/app/teachers'),
-    tile('Оборот за период', formatMoney(data.finance.income), `Прибыль: ${formatMoney(data.finance.profit)}`, '/app/finance')
+    ...[
+      tile('Учеников всего', data.students.total, `Активных: ${data.students.byStatus.active || 0}`, '/app/students'),
+      tile('Новых заявок', data.applications.period, `Не обработано: ${data.applications.new}`, '/app/applications'),
+      can('canManageUsers')
+        ? tile('Преподавателей', data.teachers.total, `Доступ открыт: ${data.teachers.active}`, '/app/teachers')
+        : null,
+      tile('Оборот за период', formatMoney(data.finance.income), `Прибыль: ${formatMoney(data.finance.profit)}`, '/app/finance'),
+    ].filter(Boolean)
   );
 
   const lessons = data.lessons;
@@ -254,7 +270,8 @@ async function load() {
   try {
     const data = await api('/dashboard', { query: period });
     clear(panelsRoot);
-    if (data.role === 'admin') renderAdmin(data);
+    // У управляющего payload такой же, как у администратора, — и сводка та же.
+    if (data.role === 'admin' || data.role === 'manager') renderAdmin(data);
     else renderTeacher(data);
   } catch (error) {
     tilesRoot.replaceChildren(emptyBlock('Не удалось загрузить сводку', error.message));
@@ -292,9 +309,10 @@ for (const button of document.querySelectorAll('[data-period]')) {
 }
 
 // Приветствие в подзаголовке страницы делает главную чуть менее казённой.
+// Ветка — по праву видеть всех учеников: сводка по школе есть у всех, кто видит школу целиком.
 const subheading = document.querySelector('header p');
 if (subheading && USER.name) {
-  subheading.textContent = isAdmin
+  subheading.textContent = can('canViewAllStudents')
     ? `${USER.name} · сводка по школе`
     : `${USER.name} · ваши занятия и ученики`;
 }

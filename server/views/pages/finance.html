@@ -45,7 +45,7 @@
       <h2 class="panel-title">Начисления преподавателям</h2>
       <p class="text-xs text-muted">Ставка × проведённые занятия за выбранный период</p>
     </div>
-    <div class="table-scroll">
+    <div class="table-scroll hidden lg:block">
       <table class="data-table">
         <thead>
           <tr>
@@ -60,12 +60,13 @@
         <tbody id="payrollRows"></tbody>
       </table>
     </div>
+    <div id="payrollCards" class="space-y-3 p-4 lg:hidden"></div>
   </div>
 
   <div class="grid gap-4 lg:grid-cols-2">
     <div class="panel">
       <div class="panel-head"><h2 class="panel-title">Оплаты учеников</h2></div>
-      <div class="table-scroll">
+      <div class="table-scroll hidden lg:block">
         <table class="data-table min-w-[30rem]">
           <thead>
             <tr>
@@ -78,11 +79,12 @@
           <tbody id="paymentRows"></tbody>
         </table>
       </div>
+      <div id="paymentCards" class="space-y-3 p-4 lg:hidden"></div>
     </div>
 
     <div class="panel">
       <div class="panel-head"><h2 class="panel-title">Расходы</h2></div>
-      <div class="table-scroll">
+      <div class="table-scroll hidden lg:block">
         <table class="data-table min-w-[30rem]">
           <thead>
             <tr>
@@ -95,6 +97,7 @@
           <tbody id="expenseRows"></tbody>
         </table>
       </div>
+      <div id="expenseCards" class="space-y-3 p-4 lg:hidden"></div>
     </div>
   </div>
 
@@ -103,7 +106,7 @@
       <h2 class="panel-title">Отчёт по занятиям</h2>
       <p class="text-xs text-muted">За выбранный период</p>
     </div>
-    <div class="table-scroll">
+    <div class="table-scroll hidden lg:block">
       <table class="data-table">
         <thead>
           <tr>
@@ -116,5 +119,6 @@
         <tbody id="lessonReportRows"></tbody>
       </table>
     </div>
+    <div id="lessonReportCards" class="space-y-3 p-4 lg:hidden"></div>
   </div>
 </section>

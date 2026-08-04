@@ -6,7 +6,7 @@
  */
 
 import './shell.js';
-import { api, byId, clear, debounce, emptyBlock, formatMoney, h, toast } from './core.js';
+import { api, byId, clear, debounce, emptyBlock, formatMoney, h, roleLabel, toast } from './core.js';
 import { openTeacherForm } from './teacher-form.js';
 
 let items = [];
@@ -70,7 +70,11 @@ function createRow(item) {
     [
       h('td', {}, [
         h('span', { class: 'block font-medium', text: item.name }),
-        item.role === 'admin' ? h('span', { class: 'text-2xs uppercase tracking-wider text-cobalt', text: 'Администратор' }) : null,
+        // Подпись роли — только у тех, кто не просто преподаватель: строка «Преподаватель»
+        // под каждым именем в списке преподавателей ничего не сообщает.
+        item.role !== 'teacher'
+          ? h('span', { class: 'text-2xs uppercase tracking-wider text-cobalt', text: roleLabel(item.role) })
+          : null,
       ]),
       h('td', { class: 'font-mono text-xs text-muted', text: item.login }),
       h('td', { class: 'max-w-[16rem] truncate text-sm text-muted', attrs: { title: (item.courses || []).join(', ') }, text: (item.courses || []).join(', ') || '—' }),
@@ -100,6 +104,11 @@ function createCard(item) {
         h('div', { class: 'min-w-0' }, [
           h('p', { class: 'font-display text-base font-semibold', text: item.name }),
           h('p', { class: 'mt-0.5 font-mono text-xs text-muted', text: item.login }),
+          // Та же подпись роли, что и в таблице: без неё на телефоне управляющий
+          // и администратор выглядели преподавателями без учеников и ставки.
+          item.role !== 'teacher'
+            ? h('p', { class: 'mt-1 text-2xs uppercase tracking-wider text-cobalt', text: roleLabel(item.role) })
+            : null,
         ]),
         accessBadge(item.active),
       ]),

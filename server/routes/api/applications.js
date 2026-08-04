@@ -1,13 +1,14 @@
 'use strict';
 
 /**
- * Модуль «Заявки» — только для администратора.
- * Проверка стоит на самом роутере (requireAdminApi), поэтому ни один обработчик
+ * Модуль «Заявки» — для администратора и управляющего.
+ * Проверка стоит на самом роутере (requireRoleApi), поэтому ни один обработчик
  * ниже не может быть вызван преподавателем даже прямым запросом к API.
  */
 
 const express = require('express');
 
+const access = require('../../domain/access');
 const applications = require('../../models/applications');
 const audit = require('../../models/audit');
 const catalog = require('../../domain/catalog');
@@ -215,6 +216,13 @@ router.post(
     // а на гонку эта проверка не влияет — сотрудника здесь только читают.
     const teacherId = db.asText(body.teacherId);
     if (teacherId) {
+      // Конвертация — второй путь создания карточки ученика, и правило закрепления
+      // здесь ровно то же, что в POST /students: назначает преподавателя только
+      // администратор. Иначе управляющий обходил бы запрет через окно конвертации.
+      if (!access.canAssignTeacher(req.user)) {
+        return failValidation(res, { teacherId: 'Назначать преподавателей ученикам может только администратор.' });
+      }
+
       const teacher = await users.getById(teacherId);
       if (!teacher || teacher.role !== 'teacher') return failValidation(res, { teacherId: 'Преподаватель не найден.' });
     }
@@ -280,10 +288,13 @@ router.post(
 
 // ---------------------------------------------------------------------- CSV
 
+// Третий элемент кортежа — признак телефонной колонки. Он есть только у «Телефона»:
+// послабление для номеров, начинающихся с «+», не должно распространяться
+// на свободный ввод родителя в остальных колонках. Где флага нет — undefined, то есть «нет».
 const CSV_COLUMNS = [
   ['Дата заявки', (item) => formatDateTime(item.createdAt)],
   ['Родитель', (item) => item.parentName],
-  ['Телефон', (item) => item.phone],
+  ['Телефон', (item) => item.phone, true],
   ['Email', (item) => item.email],
   ['Ребёнок', (item) => item.childName],
   ['Возраст', (item) => (item.childAge === null ? '' : item.childAge)],
@@ -309,13 +320,29 @@ function formatDateTime(iso) {
 }
 
 const FORMULA_START = /^[=@\t\r]/;
-const PHONE_LIKE = /^[+-][\d\s().-]+$/;
+const SIGN_START = /^[+-]/;
 
-function csvCell(value) {
+/**
+ * Телефон в базе всегда нормализован (normalizePhone в server/routes/public.js):
+ * ведущий «+» и 10–15 цифр, без пробелов и скобок. Разделители снимаем перед проверкой —
+ * ради номеров из старых данных, которые могли сохранить форматирование.
+ * Минус не пропускаем принципиально: номер с него не начинается, а «-1-1» Excel посчитает.
+ */
+const PHONE_SEPARATORS = /[\s().-]/g;
+const PHONE_LIKE = /^\+\d{10,15}$/;
+
+function looksLikePhone(text) {
+  return PHONE_LIKE.test(text.replace(PHONE_SEPARATORS, ''));
+}
+
+function csvCell(value, isPhoneColumn = false) {
   const text = String(value ?? '');
   // Excel выполняет содержимое ячейки, начинающееся с = @ + -, поэтому такие значения гасим апострофом.
-  // Телефон (+7 999 …) под это правило формально попадает, но формулой не является — его не трогаем.
-  const looksLikeFormula = FORMULA_START.test(text) || (/^[+-]/.test(text) && !PHONE_LIKE.test(text));
+  // Единственное исключение — номер в колонке «Телефон»: +7 999 … под правило формально
+  // попадает, но формулой не является. В остальных колонках лежит свободный ввод с сайта,
+  // и «-1-1» там — вычитание, а не текст, так что послабление на них не распространяется.
+  const looksLikeFormula =
+    FORMULA_START.test(text) || (SIGN_START.test(text) && !(isPhoneColumn && looksLikePhone(text)));
   const safe = looksLikeFormula ? `'${text}` : text;
   return `"${safe.replace(/"/g, '""')}"`;
 }
@@ -323,7 +350,7 @@ function csvCell(value) {
 function buildCsv(items) {
   const rows = [CSV_COLUMNS.map(([title]) => csvCell(title)).join(';')];
   for (const item of items) {
-    rows.push(CSV_COLUMNS.map(([, read]) => csvCell(read(item))).join(';'));
+    rows.push(CSV_COLUMNS.map(([, read, isPhoneColumn]) => csvCell(read(item), isPhoneColumn)).join(';'));
   }
   // BOM + разделитель «;» — чтобы Excel с русской локалью открыл файл без плясок с бубном.
   return `﻿${rows.join('\r\n')}\r\n`;

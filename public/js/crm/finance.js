@@ -14,6 +14,7 @@ import {
   CATALOG,
   api,
   byId,
+  confirmModal,
   emptyBlock,
   endOfMonth,
   field,
@@ -149,44 +150,73 @@ function labelOfPoint(key) {
 
 // ------------------------------------------------------------- начисления
 
+function payrollButton(row) {
+  const done = row.alreadyPaid > 0;
+
+  const button = h('button', {
+    class: done ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm',
+    attrs: { type: 'button' },
+    dataset: { labelIdle: done ? 'Начислено' : 'Начислить', labelLoading: 'Начисляем…' },
+    props: { disabled: done || row.amount <= 0 },
+    text: done ? 'Начислено' : 'Начислить',
+    on: { click: () => createPayroll(row, button) },
+  });
+
+  return button;
+}
+
 function renderPayroll() {
   const rows = byId('payrollRows');
+  const cards = byId('payrollCards');
   const items = summary.payroll || [];
 
   if (items.length === 0) {
     rows.replaceChildren(
       h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '6' }, text: 'За период нет проведённых занятий.' }))
     );
+    cards.replaceChildren(emptyBlock('За период нет проведённых занятий', ''));
     return;
   }
 
   rows.replaceChildren(
-    ...items.map((row) => {
-      const done = row.alreadyPaid > 0;
-
-      const button = h('button', {
-        class: done ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm',
-        attrs: { type: 'button' },
-        dataset: { labelIdle: done ? 'Начислено' : 'Начислить', labelLoading: 'Начисляем…' },
-        props: { disabled: done || row.amount <= 0 },
-        text: done ? 'Начислено' : 'Начислить',
-        on: { click: () => createPayroll(row, button) },
-      });
-
-      return h('tr', {}, [
+    ...items.map((row) =>
+      h('tr', {}, [
         h('td', { class: 'font-medium', text: row.name }),
         h('td', { class: 'whitespace-nowrap tnum', text: row.rate ? formatMoney(row.rate) : '— ставка не задана' }),
         h('td', { class: 'tnum', text: String(row.lessons) }),
         h('td', { class: 'whitespace-nowrap font-semibold tnum', text: formatMoney(row.amount) }),
         h('td', { class: 'whitespace-nowrap tnum text-muted', text: row.alreadyPaid ? formatMoney(row.alreadyPaid) : '—' }),
-        h('td', { class: 'text-right' }, button),
-      ]);
-    })
+        h('td', { class: 'text-right' }, payrollButton(row)),
+      ])
+    )
+  );
+
+  cards.replaceChildren(
+    ...items.map((row) =>
+      h('div', { class: 'tile' }, [
+        h('div', { class: 'flex items-start justify-between gap-3' }, [
+          h('div', { class: 'min-w-0' }, [
+            h('p', { class: 'font-display text-base font-semibold', text: row.name }),
+            h('p', { class: 'mt-0.5 text-sm text-muted', text: row.rate ? `${formatMoney(row.rate)} × ${row.lessons}` : 'Ставка не задана' }),
+          ]),
+          h('p', { class: 'shrink-0 font-display text-base font-semibold tnum', text: formatMoney(row.amount) }),
+        ]),
+        h('div', { class: 'mt-3 flex items-center justify-between gap-3' }, [
+          h('p', { class: 'text-sm text-muted', text: row.alreadyPaid ? `Начислено: ${formatMoney(row.alreadyPaid)}` : 'Ещё не начислено' }),
+          payrollButton(row),
+        ]),
+      ])
+    )
   );
 }
 
 async function createPayroll(row, button) {
-  if (!window.confirm(`Начислить ${formatMoney(row.amount)} преподавателю «${row.name}» за период ${formatDay(period.from)} — ${formatDay(period.to)}?`)) {
+  if (
+    !(await confirmModal(
+      `Начислить ${formatMoney(row.amount)} преподавателю «${row.name}» за период ${formatDay(period.from)} — ${formatDay(period.to)}?`,
+      { title: 'Начисление зарплаты', confirmLabel: 'Начислить', kind: 'primary' }
+    ))
+  ) {
     return;
   }
 
@@ -206,14 +236,25 @@ async function createPayroll(row, button) {
 
 // ------------------------------------------------------- оплаты и расходы
 
+function deleteButton(kind, id, question) {
+  return h('button', {
+    class: 'btn btn-sm btn-danger',
+    attrs: { type: 'button' },
+    text: 'Удалить',
+    on: { click: () => removeEntry(kind, id, question) },
+  });
+}
+
 function renderPayments() {
   const rows = byId('paymentRows');
+  const cards = byId('paymentCards');
   const items = summary.payments || [];
 
   if (items.length === 0) {
     rows.replaceChildren(
       h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '4' }, text: 'Оплат за период нет.' }))
     );
+    cards.replaceChildren(emptyBlock('Оплат за период нет', ''));
     return;
   }
 
@@ -226,16 +267,23 @@ function renderPayments() {
           payment.comment ? h('span', { class: 'block truncate text-xs text-muted', text: payment.comment }) : null,
         ]),
         h('td', { class: 'whitespace-nowrap font-semibold tnum', text: formatMoney(payment.amount) }),
-        h(
-          'td',
-          { class: 'text-right' },
-          h('button', {
-            class: 'btn btn-sm btn-danger',
-            attrs: { type: 'button' },
-            text: 'Удалить',
-            on: { click: () => removeEntry('payments', payment.id, 'Удалить эту оплату?') },
-          })
-        ),
+        h('td', { class: 'text-right' }, deleteButton('payments', payment.id, 'Удалить эту оплату?')),
+      ])
+    )
+  );
+
+  cards.replaceChildren(
+    ...items.map((payment) =>
+      h('div', { class: 'tile' }, [
+        h('div', { class: 'flex items-start justify-between gap-3' }, [
+          h('div', { class: 'min-w-0' }, [
+            h('p', { class: 'font-display text-base font-semibold', text: payment.studentName }),
+            h('p', { class: 'mt-0.5 font-mono text-xs tnum text-muted', text: formatDay(payment.date) }),
+            payment.comment ? h('p', { class: 'mt-1 text-sm text-muted', text: payment.comment }) : null,
+          ]),
+          h('p', { class: 'shrink-0 font-display text-base font-semibold tnum', text: formatMoney(payment.amount) }),
+        ]),
+        h('div', { class: 'mt-3' }, deleteButton('payments', payment.id, 'Удалить эту оплату?')),
       ])
     )
   );
@@ -243,12 +291,14 @@ function renderPayments() {
 
 function renderExpenses() {
   const rows = byId('expenseRows');
+  const cards = byId('expenseCards');
   const items = summary.expenses || [];
 
   if (items.length === 0) {
     rows.replaceChildren(
       h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '4' }, text: 'Расходов за период нет.' }))
     );
+    cards.replaceChildren(emptyBlock('Расходов за период нет', ''));
     return;
   }
 
@@ -261,16 +311,25 @@ function renderExpenses() {
           h('span', { class: 'block truncate text-xs text-muted', text: expense.comment || expense.teacherName || '' }),
         ]),
         h('td', { class: 'whitespace-nowrap font-semibold tnum', text: formatMoney(expense.amount) }),
-        h(
-          'td',
-          { class: 'text-right' },
-          h('button', {
-            class: 'btn btn-sm btn-danger',
-            attrs: { type: 'button' },
-            text: 'Удалить',
-            on: { click: () => removeEntry('expenses', expense.id, 'Удалить эту запись о расходе?') },
-          })
-        ),
+        h('td', { class: 'text-right' }, deleteButton('expenses', expense.id, 'Удалить эту запись о расходе?')),
+      ])
+    )
+  );
+
+  cards.replaceChildren(
+    ...items.map((expense) =>
+      h('div', { class: 'tile' }, [
+        h('div', { class: 'flex items-start justify-between gap-3' }, [
+          h('div', { class: 'min-w-0' }, [
+            h('p', { class: 'font-display text-base font-semibold', text: expense.categoryLabel }),
+            h('p', { class: 'mt-0.5 font-mono text-xs tnum text-muted', text: formatDay(expense.date) }),
+            expense.comment || expense.teacherName
+              ? h('p', { class: 'mt-1 text-sm text-muted', text: expense.comment || expense.teacherName })
+              : null,
+          ]),
+          h('p', { class: 'shrink-0 font-display text-base font-semibold tnum', text: formatMoney(expense.amount) }),
+        ]),
+        h('div', { class: 'mt-3' }, deleteButton('expenses', expense.id, 'Удалить эту запись о расходе?')),
       ])
     )
   );
@@ -278,12 +337,14 @@ function renderExpenses() {
 
 function renderLessonReport() {
   const rows = byId('lessonReportRows');
+  const cards = byId('lessonReportCards');
   const items = summary.byTeacher || [];
 
   if (items.length === 0) {
     rows.replaceChildren(
       h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '4' }, text: 'За период занятий не было.' }))
     );
+    cards.replaceChildren(emptyBlock('За период занятий не было', ''));
     return;
   }
 
@@ -297,10 +358,32 @@ function renderLessonReport() {
       ])
     )
   );
+
+  cards.replaceChildren(
+    ...items.map((row) =>
+      h(
+        'button',
+        {
+          class: 'tile tile-clickable block w-full',
+          attrs: { type: 'button', 'aria-label': `Открыть карточку: ${row.name}` },
+          on: { click: () => (window.location.href = `/app/teachers/${row.teacherId}`) },
+        },
+        [
+          h('p', { class: 'font-display text-base font-semibold', text: row.name }),
+          h('div', { class: 'mt-2 grid grid-cols-3 gap-2 text-sm' }, [
+            h('div', {}, [h('p', { class: 'tnum font-semibold', text: String(row.total) }), h('p', { class: 'text-xs text-muted', text: 'Всего' })]),
+            h('div', {}, [h('p', { class: 'tnum font-semibold text-mint-700', text: String(row.done) }), h('p', { class: 'text-xs text-muted', text: 'Проведено' })]),
+            h('div', {}, [h('p', { class: 'tnum font-semibold text-muted', text: String(row.cancelled) }), h('p', { class: 'text-xs text-muted', text: 'Отменено' })]),
+          ]),
+        ]
+      )
+    )
+  );
 }
 
 async function removeEntry(kind, id, question) {
-  if (!window.confirm(question)) return;
+  const title = kind === 'payments' ? 'Удаление оплаты' : 'Удаление записи о расходе';
+  if (!(await confirmModal(question, { title }))) return;
 
   try {
     await api(`/finance/${kind}/${encodeURIComponent(id)}`, { method: 'DELETE' });

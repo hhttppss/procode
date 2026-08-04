@@ -9,9 +9,19 @@ const lessons = require('../models/lessons');
 const notifications = require('../models/notifications');
 const users = require('../models/users');
 
-async function activeAdminIds() {
-  const admins = await users.listByRole('admin');
-  return admins.filter((admin) => admin.active).map((admin) => admin.id);
+/**
+ * Идентификаторы активных сотрудников перечисленных ролей.
+ * Заблокированным не шлём: они всё равно не войдут, а лента копилась бы впустую.
+ */
+async function activeIdsByRoles(roles) {
+  const found = [];
+  for (const role of roles) {
+    const staff = await users.listByRole(role);
+    for (const user of staff) {
+      if (user.active) found.push(user.id);
+    }
+  }
+  return found;
 }
 
 function lessonWhen(lesson) {
@@ -19,9 +29,13 @@ function lessonWhen(lesson) {
   return `${day}.${month}.${year} в ${lesson.startTime}`;
 }
 
-/** Новая заявка с лендинга — всем администраторам. */
+/**
+ * Новая заявка с лендинга — администраторам и управляющим.
+ * Список ролей повторяет MODULE_ACCESS.applications из domain/access.js: заявку получает тот,
+ * кто может её открыть, иначе уведомление вело бы на страницу с редиректом на главную.
+ */
 async function newApplication(application) {
-  const ids = await activeAdminIds();
+  const ids = await activeIdsByRoles(['admin', 'manager']);
   if (ids.length === 0) return;
 
   await notifications.pushMany(ids, {

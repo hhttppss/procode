@@ -3,11 +3,11 @@
 /**
  * Модуль «Расписание».
  *
- * Администратор: календарь день/неделя/месяц, создание занятий (в том числе
- * повторяющихся), перенос и удаление.
- * Преподаватель: только свои занятия в видах «день» и «неделя», без редактирования —
- * ему доступна лишь отметка итога: проведено / отменено / перенесено, комментарий
- * и посещаемость. Набор полей ограничен и на сервере.
+ * С правом canManageLessons (администратор, управляющий): календарь день/неделя/месяц,
+ * создание занятий (в том числе повторяющихся), перенос и удаление.
+ * Без него (преподаватель): только свои занятия в видах «день» и «неделя», без
+ * редактирования — доступна лишь отметка итога: проведено / отменено / перенесено,
+ * комментарий и посещаемость. Набор полей ограничен и на сервере.
  */
 
 import './shell.js';
@@ -16,14 +16,15 @@ import {
   WEEKDAYS_SHORT,
   api,
   byId,
+  can,
   clear,
+  confirmModal,
   emptyBlock,
   endOfMonth,
   field,
   formatDay,
   formatDayLong,
   h,
-  isAdmin,
   kv,
   modalButton,
   monthTitle,
@@ -56,10 +57,14 @@ const EVENT_CLASS = {
 
 const query = new URLSearchParams(window.location.search);
 
+// Кто видит чужие занятия и фильтры по ним, кто правит календарь — решают права, а не роль.
+const seesAllLessons = can('canViewAllLessons');
+const managesLessons = can('canManageLessons');
+
 const state = {
   view: 'week',
   anchor: query.get('date') || todayDay(),
-  teacherId: isAdmin ? query.get('teacherId') || '' : '',
+  teacherId: seesAllLessons ? query.get('teacherId') || '' : '',
   studentId: query.get('studentId') || '',
   status: '',
 };
@@ -119,28 +124,30 @@ function eventChip(lesson) {
 }
 
 function lessonRow(lesson) {
+  const subtitle = [teacherName.get(lesson.teacherId), lesson.course, statusLabel(LESSON_FORMATS, lesson.format)]
+    .filter(Boolean)
+    .join(' · ');
+
   return h(
     'button',
     {
-      class: 'flex w-full items-start gap-4 rounded-xl border border-ink/[0.07] bg-white p-3.5 text-left transition hover:border-cobalt/25 hover:bg-mist/40',
+      class: 'flex w-full items-start gap-3 rounded-xl border border-ink/[0.07] bg-white p-3.5 text-left transition hover:border-cobalt/25 hover:bg-mist/40 sm:gap-4',
       attrs: { type: 'button' },
       on: { click: () => openLesson(lesson) },
     },
     [
-      h('span', { class: 'w-[5.5rem] shrink-0' }, [
+      h('span', { class: 'w-16 shrink-0 sm:w-[5.5rem]' }, [
         h('span', { class: 'block font-mono text-sm font-semibold tnum', text: lesson.startTime }),
         h('span', { class: 'block font-mono text-[11px] text-muted tnum', text: `${lesson.durationMin} мин` }),
       ]),
       h('span', { class: 'min-w-0 flex-1' }, [
         h('span', { class: 'block truncate font-semibold', text: lessonTitle(lesson) }),
-        h('span', {
-          class: 'mt-0.5 block truncate text-sm text-muted',
-          text: [teacherName.get(lesson.teacherId), lesson.course, statusLabel(LESSON_FORMATS, lesson.format)]
-            .filter(Boolean)
-            .join(' · '),
-        }),
+        h('span', { class: 'mt-0.5 block truncate text-sm text-muted', attrs: { title: subtitle }, text: subtitle }),
+        // Бейдж статуса на телефоне уходит под текст: рядом с ним от названия занятия
+        // оставалось около 40 px, и «Питон-про-пн-19:00» превращалось в «Пит…».
+        h('span', { class: 'mt-2 block sm:hidden' }, statusBadge(LESSON_STATUSES, lesson.status)),
       ]),
-      statusBadge(LESSON_STATUSES, lesson.status),
+      h('span', { class: 'hidden shrink-0 sm:block' }, statusBadge(LESSON_STATUSES, lesson.status)),
     ]
   );
 }
@@ -151,7 +158,7 @@ function renderDay() {
   const dayLessons = lessons.filter((lesson) => lesson.date === state.anchor);
 
   if (dayLessons.length === 0) {
-    return emptyBlock('На этот день занятий нет', isAdmin ? 'Добавьте занятие кнопкой «Новое занятие».' : 'Свободный день.');
+    return emptyBlock('На этот день занятий нет', managesLessons ? 'Добавьте занятие кнопкой «Новое занятие».' : 'Свободный день.');
   }
 
   return h('div', { class: 'space-y-2' }, dayLessons.map(lessonRow));
@@ -200,7 +207,7 @@ function renderWeek() {
   return h('div', { class: 'grid gap-2 sm:grid-cols-7' }, columns);
 }
 
-function renderMonth() {
+function renderMonthGrid() {
   const first = startOfMonth(state.anchor);
   const gridStart = startOfWeek(first);
   const today = todayDay();
@@ -244,6 +251,61 @@ function renderMonth() {
   return h('div', {}, [
     h('div', { class: 'grid grid-cols-7 gap-1' }, headers),
     h('div', { class: 'mt-1 grid grid-cols-7 gap-1' }, cells),
+  ]);
+}
+
+/**
+ * Мобильный вид месяца: сетка 7×6 на узком экране либо сплющивается, либо требует
+ * горизонтального скролла — у неё нет построчных данных, которые превращались бы
+ * в карточки. Вместо этого — агенда-список дней с занятиями, тот же lessonRow,
+ * что и в renderDay().
+ */
+function renderMonthAgenda() {
+  const first = startOfMonth(state.anchor);
+  const daysInMonth = Number(endOfMonth(state.anchor).slice(8, 10));
+  const today = todayDay();
+
+  const days = Array.from({ length: daysInMonth }, (unused, index) => shiftDay(first, index))
+    .map((day) => ({ day, dayLessons: lessons.filter((lesson) => lesson.date === day) }))
+    .filter(({ dayLessons }) => dayLessons.length > 0);
+
+  if (days.length === 0) {
+    return emptyBlock('В этом месяце занятий нет', managesLessons ? 'Добавьте занятие кнопкой «Новое занятие».' : 'Свободный месяц.');
+  }
+
+  return h(
+    'div',
+    { class: 'space-y-4' },
+    days.map(({ day, dayLessons }) =>
+      h('div', {}, [
+        h(
+          'button',
+          {
+            class: `mb-2 rounded-lg px-1 font-display text-sm font-semibold transition hover:text-cobalt ${
+              day === today ? 'text-cobalt' : ''
+            }`,
+            attrs: { type: 'button' },
+            text: formatDayLong(day),
+            on: {
+              click: () => {
+                state.view = 'day';
+                state.anchor = day;
+                syncViewButtons();
+                load();
+              },
+            },
+          }
+        ),
+        h('div', { class: 'space-y-2' }, dayLessons.map(lessonRow)),
+      ])
+    )
+  );
+}
+
+function renderMonth() {
+  return h('div', {}, [
+    h('div', { class: 'hidden lg:block' }, renderMonthGrid()),
+    h('div', { class: 'lg:hidden' }, renderMonthAgenda()),
   ]);
 }
 
@@ -314,6 +376,9 @@ function studentPicker(selectedIds = []) {
     );
 
     row.input = input;
+    // Держим ссылку на самого ученика: сравнивать группу по тексту строки — значит
+    // сломаться на первом же имени, где встретится название группы.
+    row.student = student;
     row.haystack = `${student.name} ${student.course} ${student.group}`.toLowerCase();
     return row;
   });
@@ -327,10 +392,52 @@ function studentPicker(selectedIds = []) {
 
   const wrapper = h('div', {}, [h('span', { class: 'field-label', text: 'Ученики' }), search, list]);
   wrapper.read = () => rows.filter((row) => row.input.checked).map((row) => row.input.value);
+
+  /**
+   * Отмечает состав выбранной группы и снимает отметки со всех остальных.
+   * Пустое имя группы — снять все отметки. Возвращает количество отмеченных,
+   * чтобы форма могла сказать человеку, что именно подставила.
+   */
+  wrapper.selectGroup = (groupName) => {
+    const target = (groupName || '').trim();
+    let matched = 0;
+    let first = null;
+
+    for (const row of rows) {
+      const belongs = target !== '' && (row.student.group || '').trim() === target;
+      row.input.checked = belongs;
+      if (belongs) {
+        matched += 1;
+        if (!first) first = row;
+      }
+    }
+
+    // Список прокручивается внутри себя, и отметки часто оказываются ниже видимой части:
+    // без этого после выбора группы на экране визуально не менялось ничего.
+    if (first) list.scrollTop += first.getBoundingClientRect().top - list.getBoundingClientRect().top - 8;
+
+    return matched;
+  };
+
   return wrapper;
 }
 
-// ------------------------------------------------- создание занятия (админ)
+// ------------------------------------------ создание занятия (canManageLessons)
+
+/**
+ * Отдельного справочника групп нет: группа — свободная строка в карточке ученика,
+ * поэтому список собираем из уже загруженного справочника учеников.
+ */
+function studentGroups() {
+  const unique = new Set();
+
+  for (const student of students) {
+    const group = (student.group || '').trim();
+    if (group) unique.add(group);
+  }
+
+  return Array.from(unique).sort((left, right) => left.localeCompare(right, 'ru', { numeric: true }));
+}
 
 function openLessonForm() {
   const dateField = field({ label: 'Дата', name: 'date', type: 'date', value: state.anchor, required: true });
@@ -353,9 +460,30 @@ function openLessonForm() {
     name: 'course',
     options: [{ value: '', label: 'Не указано' }, ...(CATALOG.courses || []).map((course) => ({ value: course, label: course }))],
   });
+  const groupField = field({
+    label: 'Группа',
+    name: 'group',
+    options: [{ value: '', label: 'Не указана' }, ...studentGroups().map((group) => ({ value: group, label: group }))],
+  });
   const titleField = field({ label: 'Название', name: 'title', placeholder: 'Например, «Группа Python-3»', hint: 'Если не заполнить — покажем имена учеников' });
   const picker = studentPicker(state.studentId ? [state.studentId] : []);
+  // Подсказка живёт в разметке всегда и до первого выбора группы пуста: пустой абзац
+  // не занимает высоты, зато остаётся живой областью — иначе экранный диктор промолчит
+  // о том, что состав учеников только что переписали.
+  const groupHint = h('p', { class: 'field-hint', attrs: { role: 'status', 'aria-live': 'polite' } });
   const commentField = field({ label: 'Заметка администратора', name: 'adminComment', type: 'textarea', rows: 2, hint: 'Преподаватель её не видит' });
+
+  // Состав подставляется только по явной смене группы: молча затирать отметки,
+  // которые человек уже расставил руками, нельзя — поэтому и пишем под списком,
+  // что именно изменилось. Отметки после подстановки остаются редактируемыми.
+  groupField.input.addEventListener('change', () => {
+    const group = groupField.input.value;
+    const matched = picker.selectGroup(group);
+
+    groupHint.textContent = group
+      ? `Подставлены ученики группы «${group}»: ${matched}`
+      : 'Группа снята — отметки учеников очищены, отметьте нужных вручную.';
+  });
 
   // -------- повторение
   const repeatToggle = h('input', {
@@ -396,8 +524,18 @@ function openLessonForm() {
   });
 
   const form = h('div', { class: 'space-y-4' }, [
-    h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [dateField, timeField, durationField, teacherField, formatField, courseField, linkField, titleField]),
-    picker,
+    h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
+      dateField,
+      timeField,
+      durationField,
+      teacherField,
+      formatField,
+      courseField,
+      groupField,
+      linkField,
+      titleField,
+    ]),
+    h('div', {}, [picker, groupHint]),
     commentField,
     h('div', { class: 'rounded-2xl border border-ink/10 bg-mist/40 p-4' }, [
       h('label', { class: 'flex cursor-pointer items-center gap-3 text-sm font-medium', attrs: { for: 'repeatToggle' } }, [
@@ -430,6 +568,7 @@ function openLessonForm() {
       teacherId: values.teacherId,
       format: values.format,
       course: values.course,
+      group: values.group,
       link: values.link,
       title: values.title,
       adminComment: values.adminComment,
@@ -506,6 +645,7 @@ function openLesson(lesson) {
     kv('Преподаватель', teacherName.get(lesson.teacherId) || '—'),
     kv('Формат', statusLabel(LESSON_FORMATS, lesson.format)),
     kv('Направление', lesson.course || '—'),
+    kv('Группа', lesson.group || '—'),
     h('div', {}, [
       h('dt', { class: 'kv-label', text: 'Ссылка' }),
       h(
@@ -555,7 +695,7 @@ function openLesson(lesson) {
   const saveButton = modalButton('Сохранить', { kind: 'primary', loadingLabel: 'Сохраняем…' });
   const actions = [saveButton];
 
-  if (isAdmin) {
+  if (managesLessons) {
     actions.push(
       modalButton('Перенести', { onClick: () => openRescheduleForm(lesson, modal) }),
       modalButton('Удалить', { kind: 'danger', onClick: () => removeLesson(lesson, modal) })
@@ -608,6 +748,7 @@ function openLesson(lesson) {
   });
 }
 
+/** Перенос — это только дата, время, преподаватель и ссылка: состав и группу здесь не трогаем. */
 function openRescheduleForm(lesson, parentModal) {
   const dateField = field({ label: 'Новая дата', name: 'date', type: 'date', value: lesson.date });
   const timeField = field({ label: 'Новое время', name: 'startTime', type: 'time', value: lesson.startTime });
@@ -654,9 +795,9 @@ async function removeLesson(lesson, modal) {
     ? 'Удалить это занятие? Нажмите «Отмена», если хотите удалить всю серию — для этого будет отдельный вопрос.'
     : 'Удалить занятие? Восстановить его будет нельзя.';
 
-  if (!window.confirm(question)) {
+  if (!(await confirmModal(question, { title: 'Удаление занятия' }))) {
     if (!inSeries) return;
-    if (!window.confirm('Удалить всю серию, начиная с этой даты?')) return;
+    if (!(await confirmModal('Удалить всю серию, начиная с этой даты?', { title: 'Удаление серии занятий', confirmLabel: 'Удалить серию' }))) return;
 
     try {
       const data = await api(`/lessons/${encodeURIComponent(lesson.id)}?series=1`, { method: 'DELETE' });
@@ -703,9 +844,9 @@ function initControls() {
     load();
   });
 
-  byId('addLesson')?.addEventListener('click', openLessonForm);
+  if (managesLessons) byId('addLesson')?.addEventListener('click', openLessonForm);
 
-  if (isAdmin) {
+  if (seesAllLessons) {
     for (const [id, key] of [
       ['filterTeacher', 'teacherId'],
       ['filterStudent', 'studentId'],
@@ -722,7 +863,7 @@ function initControls() {
 }
 
 function fillFilters() {
-  if (!isAdmin) return;
+  if (!seesAllLessons) return;
 
   const teacherSelect = byId('filterTeacher');
   teacherSelect.replaceChildren(
@@ -748,8 +889,9 @@ function fillFilters() {
 }
 
 async function init() {
-  // Преподавателю месяц недоступен: по требованиям ему нужны виды «день» и «неделя».
-  if (!isAdmin && state.view === 'month') state.view = 'week';
+  // Месяц — только тем, кто видит всё расписание: преподавателю по требованиям
+  // нужны виды «день» и «неделя», и кнопки «Месяц» у него в разметке нет.
+  if (!seesAllLessons && state.view === 'month') state.view = 'week';
 
   initControls();
 

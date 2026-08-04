@@ -143,8 +143,11 @@
     @apply bg-ink text-paper hover:-translate-y-0.5 hover:bg-ink-700 active:translate-y-0;
   }
 
+  /* border-ink/15 давал 1.38:1 на белом — далеко ниже нормы WCAG 1.4.11 (3:1 для рамок
+     интерактивных элементов). border-ink/45 — расчётный минимум (3.01:1), hover — border-ink/60
+     (4.87:1), заметно темнее состояния покоя. */
   .btn-outline {
-    @apply border border-ink/15 bg-transparent text-ink hover:border-ink/40 hover:bg-ink/5;
+    @apply border border-ink/45 bg-transparent text-ink hover:border-ink/60 hover:bg-ink/5;
   }
 
   .btn-ghost-light {
@@ -196,8 +199,10 @@
     @apply text-cobalt-100;
   }
 
+  /* border-ink/15 давал 1.38:1 на белом фоне поля — ниже нормы WCAG 1.4.11 (3:1 для
+     рамок интерактивных элементов). border-ink/45 — расчётный минимум, даёт 3.01:1. */
   .field-input {
-    @apply w-full rounded-xl border border-ink/15 bg-white px-4 py-3 text-[0.9375rem]
+    @apply w-full rounded-xl border border-ink/45 bg-white px-4 py-3 text-[0.9375rem]
            text-ink placeholder:text-muted/60 transition
            focus:border-cobalt focus:outline-none focus:ring-2 focus:ring-cobalt/25;
   }
@@ -209,8 +214,28 @@
            focus:border-apricot focus:ring-apricot/25;
   }
 
+  /* Отключённое поле должно читаться как «только чтение».
+     Без этого правила .field-input перекрывает служебные стили браузера, и поле,
+     которое ничего не принимает, выглядит совершенно рабочим: так профиль
+     преподавателя и закрытое для управляющего закрепление ученика читались как поломка.
+     muted на mist — 5.4:1, значение остаётся разборчивым, а не «выключенным». */
+  .field-input:disabled {
+    @apply cursor-not-allowed border-ink/10 bg-mist/70 text-muted;
+  }
+
+  .on-ink .field-input:disabled {
+    @apply cursor-not-allowed border-white/10 bg-white/[0.03] text-white/55;
+  }
+
   .field-input[aria-invalid='true'] {
     @apply border-red-500 focus:border-red-500 focus:ring-red-500/25;
+  }
+
+  /* Форма заявки на лендинге — крупнее шрифт (16px) для удобства набора на телефоне.
+     Селектор нарочно узкий: .field-input используется и в CRM-панели (20+ мест),
+     трогать её шрифт здесь не нужно. */
+  #applicationForm .field-input {
+    @apply text-base;
   }
 
   /* red-500 давал на белом только 3.76:1 — ниже нормы 4.5:1 для мелкого текста.
@@ -628,8 +653,13 @@
     @apply flex flex-wrap items-center gap-2 border-t border-ink/10 bg-white px-5 py-4 sm:px-6;
   }
 
+  /* Тач-таргет ровно 44×44px (норма WCAG 2.5.5) — как .icon-button, так и явное
+     h-11 w-11 в разметке (бургер на лендинге, navOpen/bellButton в layout.html) —
+     иконка внутри остаётся 18px, растёт только кликабельная область.
+     Рамка — border-ink/45: border-ink/10 давал 1.23:1 на белом, ниже нормы 3:1. */
   .icon-button {
-    @apply rounded-full border border-ink/10 p-2 text-muted transition hover:bg-ink/5 hover:text-ink;
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink/45
+           text-muted transition hover:bg-ink/5 hover:text-ink;
   }
 
   /* ---------- Календарь ---------- */

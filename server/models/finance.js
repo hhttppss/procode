@@ -96,9 +96,7 @@ function sum(items) {
 
 /** Удаляет оплаты ученика вместе с его карточкой — иначе в отчётах остаётся «висящий» доход. */
 async function removePaymentsOfStudent(studentId) {
-  const items = await payments.filter((item) => item.studentId === studentId);
-  for (const item of items) await payments.remove(item.id);
-  return items.length;
+  return payments.removeWhere((item) => item.studentId === studentId);
 }
 
 module.exports = {

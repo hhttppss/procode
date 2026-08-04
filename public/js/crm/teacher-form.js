@@ -72,7 +72,7 @@ export function openTeacherForm({ teacher = null, onSaved }) {
     name: 'role',
     value: value.role || 'teacher',
     options: (CATALOG.roles || []).map((role) => ({ value: role.id, label: role.label })),
-    hint: 'Администратор видит все модули, преподаватель — только своих учеников и расписание',
+    hint: 'Администратор видит все модули; управляющий — заявки, учеников, расписание и финансы, но не управляет учётными записями; преподаватель — только своих учеников и своё расписание',
   });
 
   const courses = coursesPicker(value.courses || []);

@@ -5,7 +5,7 @@
  * Подключается каждой страницей — поведение шапки одинаково во всех модулях.
  */
 
-import { api, byId, formatRelative, h, isAdmin, toast } from './core.js';
+import { api, byId, can, formatRelative, h, isAdmin, toast } from './core.js';
 
 const POLL_INTERVAL_MS = 30000;
 
@@ -17,12 +17,22 @@ const POLL_INTERVAL_MS = 30000;
 export const POLL_EVENT = 'crm:poll';
 
 /**
- * Элементы с data-admin-only лежат в разметке скрытыми и показываются только администратору.
- * Это удобство, а не защита: соответствующие запросы к API преподавателю всё равно вернут 403.
+ * Разметка приезжает скрытой и раскрывается по правам. Это лишь отражение серверных
+ * проверок, а не защита: запрос без права всё равно вернёт 403.
+ *
+ * Два механизма, потому что случаи разные:
+ * [data-admin-only]            — строго администратор (управление учётками и подобное);
+ * [data-requires="имяФлага"]   — показываем, если сервер выдал такое право; так управляющий
+ *                                получает блоки, не переписывая условия под каждую роль.
  */
 function applyRoleVisibility() {
-  if (!isAdmin) return;
-  for (const node of document.querySelectorAll('[data-admin-only]')) node.hidden = false;
+  if (isAdmin) {
+    for (const node of document.querySelectorAll('[data-admin-only]')) node.hidden = false;
+  }
+
+  for (const node of document.querySelectorAll('[data-requires]')) {
+    if (can(node.dataset.requires)) node.hidden = false;
+  }
 }
 
 // ------------------------------------------------------------------- меню
@@ -121,8 +131,9 @@ function initNotifications() {
     counter.hidden = unread === 0;
 
     // Значок «Заявки» в меню показывает, сколько новых обращений ещё не открыли.
+    // Считаем по праву, а не по роли: заявками занимается и управляющий.
     const navBadge = document.querySelector('[data-nav-badge="applications"]');
-    if (navBadge && isAdmin) {
+    if (navBadge && can('canManageApplications')) {
       const applicationsUnread = items.filter((item) => item.type === 'application' && !item.read).length;
       navBadge.textContent = String(applicationsUnread);
       navBadge.hidden = applicationsUnread === 0;

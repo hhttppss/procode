@@ -3,12 +3,13 @@
 /**
  * Окно создания и редактирования карточки ученика.
  * Вынесено отдельно, потому что открывается из двух мест: списка и самой карточки.
- * Форму видит только администратор — у преподавателя нет ни кнопки, ни права на запись.
+ * Форма открывается по праву canEditStudent — у преподавателя нет ни кнопки, ни права на запись.
  */
 
 import {
   CATALOG,
   api,
+  can,
   field,
   h,
   modalButton,
@@ -26,6 +27,10 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
   const isEdit = Boolean(student);
   const value = student || {};
   const traits = value.traits || {};
+
+  // Закрепление за преподавателем — отдельное право. Управляющий видит, кто ведёт
+  // ученика, но менять закрепление не может: сервер такой запрос отклонит.
+  const canAssignTeacher = can('canAssignTeacher');
 
   const main = h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
     field({ label: 'Имя ребёнка', name: 'name', value: value.name || '', required: true }),
@@ -55,6 +60,8 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
         { value: '', label: 'Не назначен' },
         ...teachers.map((teacher) => ({ value: teacher.id, label: teacher.name })),
       ],
+      disabled: !canAssignTeacher,
+      hint: canAssignTeacher ? '' : 'Закрепление меняет администратор',
     }),
     field({
       label: 'Статус',
@@ -123,7 +130,6 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
       startedAt: values.startedAt,
       course: values.course,
       group: values.group,
-      teacherId: values.teacherId,
       status: values.status,
       parentName: values.parentName,
       parentPhone: values.parentPhone,
@@ -138,6 +144,10 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
         wishes: values.wishes,
       },
     };
+
+    // Без права закрепления поле вообще не уходит в запрос: readForm читает и
+    // отключённые поля, а сервер отклонил бы всю форму из-за поля, менять которое нельзя.
+    if (canAssignTeacher) payload.teacherId = values.teacherId;
 
     try {
       const data = isEdit

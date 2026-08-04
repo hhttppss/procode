@@ -528,6 +528,50 @@ function collection(name, { normalize, prefix } = {}) {
     });
   }
 
+  /**
+   * Массовое обновление по предикату: одно место в очереди и одна перезапись коллекции.
+   *
+   * Зачем отдельный метод: update() в цикле — это N мест в очереди, и каждое из них заново
+   * читает и целиком переписывает коллекцию (снятие ученика с полусотни занятий переписывало
+   * lessons полсотни раз и всё это время держало очередь записи занятой).
+   *
+   * patch — объект с полями либо функция (current) => патч, как в update(). Функция,
+   * вернувшая falsy, оставляет свою запись без изменений — в ответ она не попадёт.
+   * Поля id и createdAt защищены от перезаписи.
+   *
+   * @returns {Promise<object[]>} копии изменённых записей (пустой массив — коллекция не тронута)
+   */
+  async function updateWhere(predicate, patch) {
+    return enqueue(async () => {
+      const items = (await readAll()).slice();
+      const now = new Date().toISOString();
+      const updated = [];
+
+      for (let index = 0; index < items.length; index += 1) {
+        const current = items[index];
+        if (!predicate(current)) continue;
+
+        const changes = typeof patch === 'function' ? patch({ ...current }) : patch;
+        if (!changes) continue;
+
+        const merged = { ...current, ...changes, id: current.id, createdAt: current.createdAt };
+        merged.updatedAt = now;
+
+        const record = toRecord(merged);
+        if (!record) continue; // запись не прошла нормализацию — оставляем как была
+
+        // Запись подменяется целиком, а не правится по месту: тот же объект лежит в кэше.
+        items[index] = record;
+        updated.push({ ...record });
+      }
+
+      if (updated.length === 0) return [];
+
+      await writeAll(items);
+      return updated;
+    });
+  }
+
   async function remove(id) {
     return enqueue(async () => {
       const items = await readAll();
@@ -536,6 +580,24 @@ function collection(name, { normalize, prefix } = {}) {
 
       await writeAll(rest);
       return true;
+    });
+  }
+
+  /**
+   * Массовое удаление по предикату: одно место в очереди и одна перезапись коллекции —
+   * в отличие от remove() в цикле, где каждая итерация читает и переписывает коллекцию заново
+   * (удаление серии из двухсот занятий выходило в двести полных перезаписей lessons).
+   *
+   * @returns {Promise<number>} сколько записей удалено (0 — коллекция не тронута)
+   */
+  async function removeWhere(predicate) {
+    return enqueue(async () => {
+      const items = await readAll();
+      const rest = items.filter((item) => !predicate(item));
+      if (rest.length === items.length) return 0;
+
+      await writeAll(rest);
+      return items.length - rest.length;
     });
   }
 
@@ -565,7 +627,9 @@ function collection(name, { normalize, prefix } = {}) {
     create,
     createMany,
     update,
+    updateWhere,
     remove,
+    removeWhere,
     replaceAll,
   };
 

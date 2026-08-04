@@ -10,7 +10,9 @@ import {
   CATALOG,
   api,
   byId,
+  can,
   clear,
+  confirmModal,
   debounce,
   emptyBlock,
   field,
@@ -418,7 +420,7 @@ function openCard(item) {
   });
 
   deleteButton.addEventListener('click', async () => {
-    if (!window.confirm(`Удалить заявку от «${item.parentName || 'без имени'}»? Восстановить её будет нельзя.`)) return;
+    if (!(await confirmModal(`Удалить заявку от «${item.parentName || 'без имени'}»? Восстановить её будет нельзя.`, { title: 'Удаление заявки' }))) return;
 
     deleteButton.disabled = true;
     try {
@@ -445,10 +447,17 @@ function openConvert(item, parentModal) {
     options: [{ value: '', label: 'Не выбрано' }, ...(CATALOG.courses || []).map((course) => ({ value: course, label: course }))],
   });
   const groupField = field({ label: 'Группа', name: 'group', placeholder: 'Например, «Питон-вт-17:00»' });
+
+  // Конвертация — второй путь создания карточки, и закрепление за преподавателем
+  // подчиняется тому же правилу, что и в обычной форме ученика: его назначает
+  // администратор. Управляющий заявку зачисляет, преподавателя ей не выбирает.
+  const canAssignTeacher = can('canAssignTeacher');
   const teacherField = field({
     label: 'Преподаватель',
     name: 'teacherId',
     options: [{ value: '', label: 'Пока не назначен' }, ...teachers.map((teacher) => ({ value: teacher.id, label: teacher.name }))],
+    disabled: !canAssignTeacher,
+    hint: canAssignTeacher ? '' : 'Преподавателя закрепит администратор',
   });
   const parentNameField = field({ label: 'ФИО родителя', name: 'parentName', value: item.parentName });
   const parentPhoneField = field({ label: 'Телефон родителя', name: 'parentPhone', value: item.phone });
@@ -485,6 +494,10 @@ function openConvert(item, parentModal) {
 
     try {
       const values = readForm(form);
+      // readForm читает и отключённые поля — без права закрепления teacherId
+      // не должен уходить в запрос вовсе.
+      if (!canAssignTeacher) delete values.teacherId;
+
       const data = await api(`/applications/${encodeURIComponent(item.id)}/convert`, { method: 'POST', body: values });
 
       toast('Карточка ученика создана');

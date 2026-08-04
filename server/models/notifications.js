@@ -76,9 +76,8 @@ async function markRead(id, userId) {
 }
 
 async function markAllRead(userId) {
-  const items = await store.filter((item) => item.userId === userId && !item.read);
-  for (const item of items) await store.update(item.id, { read: true });
-  return items.length;
+  const updated = await store.updateWhere((item) => item.userId === userId && !item.read, { read: true });
+  return updated.length;
 }
 
 /** Подрезает историю, чтобы файл не рос бесконечно. Вызывается после рассылки. */
@@ -86,16 +85,16 @@ async function trim(userId) {
   const items = await store.filter((item) => item.userId === userId);
   if (items.length <= MAX_PER_USER) return 0;
 
+  // Лишние — самые старые: удаляем по заранее посчитанному списку id, а не по предикату на дате.
   const extra = items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, items.length - MAX_PER_USER);
-  for (const item of extra) await store.remove(item.id);
-  return extra.length;
+  const extraIds = new Set(extra.map((item) => item.id));
+
+  return store.removeWhere((item) => extraIds.has(item.id));
 }
 
 /** Удаляет уведомления сотрудника вместе с его учётной записью. */
 async function removeForUser(userId) {
-  const items = await store.filter((item) => item.userId === userId);
-  for (const item of items) await store.remove(item.id);
-  return items.length;
+  return store.removeWhere((item) => item.userId === userId);
 }
 
 module.exports = {

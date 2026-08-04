@@ -14,6 +14,9 @@ data/*.sqlite
 data/*.sqlite-wal
 data/*.sqlite-shm
 
+# Резервные копии данных (npm run backup) и откатные копии восстановления
+backups/
+
 # Локальная инструкция с паролями учётных записей
 ЗАПУСК.md
 

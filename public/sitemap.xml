@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Замените https://prokod.ru/ на реальный домен перед публикацией -->
 <!--
   privacy.html и oferta.html здесь намеренно отсутствуют: на обеих стоит
   <meta name="robots" content="noindex">, потому что пока это заглушки.

@@ -12,6 +12,7 @@ import {
   api,
   byId,
   clear,
+  confirmModal,
   emptyBlock,
   endOfMonth,
   formatAge,
@@ -20,6 +21,7 @@ import {
   formatMoney,
   h,
   kv,
+  roleLabel,
   startOfMonth,
   statusBadge,
   todayDay,
@@ -107,7 +109,7 @@ function profileBlock(teacher) {
   return panel(
     'Профиль',
     h('dl', { class: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' }, [
-      kv('Роль', teacher.role === 'admin' ? 'Администратор' : 'Преподаватель'),
+      kv('Роль', roleLabel(teacher.role)),
       h('div', {}, [
         h('dt', { class: 'kv-label', text: 'Телефон' }),
         h(
@@ -172,34 +174,60 @@ function studentsBlock(students) {
   const body =
     students.length === 0
       ? h('p', { class: 'text-sm text-muted', text: 'За преподавателем пока никто не закреплён.' })
-      : h('div', { class: 'table-scroll' }, [
-          h('table', { class: 'data-table min-w-[32rem]' }, [
-            h('thead', {}, h('tr', {}, [
-              h('th', { attrs: { scope: 'col' }, text: 'Имя' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Возраст' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Направление' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
-            ])),
-            h(
-              'tbody',
-              {},
-              students.map((student) =>
-                h(
-                  'tr',
-                  {
-                    class: 'row-clickable',
-                    on: { click: () => (window.location.href = `/app/students/${student.id}`) },
-                  },
-                  [
-                    h('td', { class: 'font-medium', text: student.name }),
-                    h('td', { class: 'text-muted tnum', text: formatAge(student.age) || '—' }),
-                    h('td', { class: 'text-muted', text: student.course || '—' }),
-                    h('td', {}, statusBadge(STUDENT_STATUSES, student.status)),
-                  ]
+      : h('div', {}, [
+          h('div', { class: 'table-scroll hidden lg:block' }, [
+            h('table', { class: 'data-table min-w-[32rem]' }, [
+              h('thead', {}, h('tr', {}, [
+                h('th', { attrs: { scope: 'col' }, text: 'Имя' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Возраст' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Направление' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
+              ])),
+              h(
+                'tbody',
+                {},
+                students.map((student) =>
+                  h(
+                    'tr',
+                    {
+                      class: 'row-clickable',
+                      on: { click: () => (window.location.href = `/app/students/${student.id}`) },
+                    },
+                    [
+                      h('td', { class: 'font-medium', text: student.name }),
+                      h('td', { class: 'text-muted tnum', text: formatAge(student.age) || '—' }),
+                      h('td', { class: 'text-muted', text: student.course || '—' }),
+                      h('td', {}, statusBadge(STUDENT_STATUSES, student.status)),
+                    ]
+                  )
                 )
-              )
-            ),
+              ),
+            ]),
           ]),
+          h(
+            'div',
+            { class: 'space-y-3 lg:hidden' },
+            students.map((student) =>
+              h(
+                'button',
+                {
+                  class: 'tile tile-clickable block w-full',
+                  attrs: { type: 'button', 'aria-label': `Открыть карточку: ${student.name}` },
+                  on: { click: () => (window.location.href = `/app/students/${student.id}`) },
+                },
+                [
+                  h('div', { class: 'flex items-start justify-between gap-3' }, [
+                    h('div', { class: 'min-w-0' }, [
+                      h('p', { class: 'font-display text-base font-semibold', text: student.name }),
+                      h('p', { class: 'mt-0.5 text-sm text-muted', text: formatAge(student.age) || 'возраст не указан' }),
+                    ]),
+                    statusBadge(STUDENT_STATUSES, student.status),
+                  ]),
+                  h('p', { class: 'mt-2 text-sm text-muted', text: student.course || 'Направление не выбрано' }),
+                ]
+              )
+            )
+          ),
         ]);
 
   return panel(`Ученики (${students.length})`, body);
@@ -209,27 +237,45 @@ function lessonsBlock(lessons) {
   const body =
     lessons.length === 0
       ? h('p', { class: 'text-sm text-muted', text: 'Занятий пока не было.' })
-      : h('div', { class: 'table-scroll' }, [
-          h('table', { class: 'data-table min-w-[30rem]' }, [
-            h('thead', {}, h('tr', {}, [
-              h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Время' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
-              h('th', { attrs: { scope: 'col' }, text: 'Комментарий' }),
-            ])),
-            h(
-              'tbody',
-              {},
-              lessons.map((lesson) =>
-                h('tr', {}, [
-                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs', text: formatDay(lesson.date) }),
-                  h('td', { class: 'whitespace-nowrap font-mono tnum text-xs text-muted', text: lesson.startTime }),
-                  h('td', {}, statusBadge(LESSON_STATUSES, lesson.status)),
-                  h('td', { class: 'max-w-[18rem] truncate text-sm text-muted', text: lesson.teacherComment || '—' }),
-                ])
-              )
-            ),
+      : h('div', {}, [
+          h('div', { class: 'table-scroll hidden lg:block' }, [
+            h('table', { class: 'data-table min-w-[30rem]' }, [
+              h('thead', {}, h('tr', {}, [
+                h('th', { attrs: { scope: 'col' }, text: 'Дата' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Время' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Статус' }),
+                h('th', { attrs: { scope: 'col' }, text: 'Комментарий' }),
+              ])),
+              h(
+                'tbody',
+                {},
+                lessons.map((lesson) =>
+                  h('tr', {}, [
+                    h('td', { class: 'whitespace-nowrap font-mono tnum text-xs', text: formatDay(lesson.date) }),
+                    h('td', { class: 'whitespace-nowrap font-mono tnum text-xs text-muted', text: lesson.startTime }),
+                    h('td', {}, statusBadge(LESSON_STATUSES, lesson.status)),
+                    h('td', { class: 'max-w-[18rem] truncate text-sm text-muted', text: lesson.teacherComment || '—' }),
+                  ])
+                )
+              ),
+            ]),
           ]),
+          h(
+            'div',
+            { class: 'space-y-3 lg:hidden' },
+            lessons.map((lesson) =>
+              h('div', { class: 'tile' }, [
+                h('div', { class: 'flex items-start justify-between gap-3' }, [
+                  h('div', { class: 'min-w-0' }, [
+                    h('p', { class: 'font-display text-base font-semibold', text: formatDay(lesson.date) }),
+                    h('p', { class: 'mt-0.5 font-mono text-xs tnum text-muted', text: lesson.startTime }),
+                  ]),
+                  statusBadge(LESSON_STATUSES, lesson.status),
+                ]),
+                lesson.teacherComment ? h('p', { class: 'mt-2 text-sm text-muted', text: lesson.teacherComment }) : null,
+              ])
+            )
+          ),
         ]);
 
   const link = h('a', {
@@ -248,7 +294,10 @@ async function toggleAccess(teacher) {
   const question = next
     ? `Открыть доступ сотруднику «${teacher.name}»?`
     : `Заблокировать доступ сотруднику «${teacher.name}»? Он сразу выйдет из системы.`;
-  if (!window.confirm(question)) return;
+  const confirmed = next
+    ? await confirmModal(question, { title: 'Открытие доступа', confirmLabel: 'Открыть', kind: 'primary' })
+    : await confirmModal(question, { title: 'Блокировка доступа', confirmLabel: 'Заблокировать' });
+  if (!confirmed) return;
 
   try {
     await api(`/teachers/${encodeURIComponent(teacher.id)}`, { method: 'PATCH', body: { active: next } });
@@ -260,7 +309,7 @@ async function toggleAccess(teacher) {
 }
 
 async function removeTeacher(teacher) {
-  if (!window.confirm(`Удалить учётную запись «${teacher.name}»? Ученики останутся, но потеряют закрепление.`)) return;
+  if (!(await confirmModal(`Удалить учётную запись «${teacher.name}»? Ученики останутся, но потеряют закрепление.`, { title: 'Удаление учётной записи' }))) return;
 
   try {
     await api(`/teachers/${encodeURIComponent(teacher.id)}`, { method: 'DELETE' });

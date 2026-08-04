@@ -279,13 +279,25 @@ function requireApi(req, res, next) {
   return res.status(401).json({ ok: false, message: 'Нужно войти в систему.' });
 }
 
-function requireAdminApi(req, res, next) {
-  if (!req.user) return res.status(401).json({ ok: false, message: 'Нужно войти в систему.' });
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ ok: false, message: 'Раздел доступен только администратору.' });
-  }
-  return next();
+/**
+ * Ограничение целого раздела по ролям: auth.requireRoleApi('admin', 'manager').
+ *
+ * Перечень ролей стоит один раз на роутере (см. routes/api/index.js), поэтому
+ * обработчики модуля пишутся уже без проверок «а можно ли сюда вообще» — они
+ * занимаются только тем, что доступно не всякому, кто раздел открыл.
+ */
+function requireRoleApi(...roles) {
+  return function checkRole(req, res, next) {
+    if (!req.user) return res.status(401).json({ ok: false, message: 'Нужно войти в систему.' });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ ok: false, message: 'Недостаточно прав для этого раздела.' });
+    }
+    return next();
+  };
 }
+
+/** Частый случай — раздел целиком администраторский. */
+const requireAdminApi = requireRoleApi('admin');
 
 /**
  * Защита от подделки запросов с чужого сайта.
@@ -327,6 +339,7 @@ module.exports = {
   attachUser,
   requirePage,
   requireApi,
+  requireRoleApi,
   requireAdminApi,
   sameOrigin,
 };

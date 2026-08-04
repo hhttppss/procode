@@ -1,8 +1,11 @@
-<!-- Расписание. Администратор правит календарь, преподаватель видит только свои занятия -->
+<!-- Расписание. Кто правит календарь и видит чужие занятия, решают права: разметка раскрывается по data-requires -->
 <section class="space-y-5">
   <div class="panel p-4 sm:p-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
+      <!-- flex-wrap и здесь: на узком экране «27.07.2026 — 02.08.2026» не помещается рядом
+           с кнопками, и без переноса ряд распирал страницу, а на 375 px заголовок ломался
+           на две строки. Так он целиком уходит на свою строку. -->
+      <div class="flex flex-wrap items-center gap-2">
         <button type="button" id="prevPeriod" class="icon-button" aria-label="Предыдущий период">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
@@ -10,20 +13,20 @@
         <button type="button" id="nextPeriod" class="icon-button" aria-label="Следующий период">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
         </button>
-        <p id="periodTitle" class="ml-1 font-display text-base font-semibold tracking-tight"></p>
+        <p id="periodTitle" class="min-w-0 font-display text-base font-semibold tracking-tight sm:ml-1"></p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
         <div class="segmented" role="group" aria-label="Вид календаря">
           <button type="button" class="segmented-item" data-view="day">День</button>
           <button type="button" class="segmented-item" data-view="week" aria-pressed="true">Неделя</button>
-          <button type="button" class="segmented-item" data-view="month" data-admin-only hidden>Месяц</button>
+          <button type="button" class="segmented-item" data-view="month" data-requires="canViewAllLessons" hidden>Месяц</button>
         </div>
-        <button type="button" id="addLesson" class="btn btn-primary btn-sm" data-admin-only hidden>Новое занятие</button>
+        <button type="button" id="addLesson" class="btn btn-primary btn-sm" data-requires="canManageLessons" hidden>Новое занятие</button>
       </div>
     </div>
 
-    <div class="mt-4 grid gap-3 sm:grid-cols-3" data-admin-only hidden>
+    <div class="mt-4 grid gap-3 sm:grid-cols-3" data-requires="canViewAllLessons" hidden>
       <label class="field" for="filterTeacher">
         <span class="field-label">Преподаватель</span>
         <select id="filterTeacher" class="field-input"></select>

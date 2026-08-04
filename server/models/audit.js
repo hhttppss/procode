@@ -117,10 +117,9 @@ async function trim() {
   }
 }
 
+/** Стирает историю удалённой сущности — одной перезаписью коллекции. */
 async function removeFor(entity, entityId) {
-  const items = await store.filter((item) => item.entity === entity && item.entityId === entityId);
-  for (const item of items) await store.remove(item.id);
-  return items.length;
+  return store.removeWhere((item) => item.entity === entity && item.entityId === entityId);
 }
 
 module.exports = {

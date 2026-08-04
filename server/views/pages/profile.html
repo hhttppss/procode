@@ -1,17 +1,18 @@
-<!-- Свой профиль. Ставку преподаватель не видит: сервер её в ответе не присылает -->
+<!-- Свой профиль. Ставку преподаватель не видит: сервер её в ответе не присылает.
+     Кнопка сохранения и блок пароля раскрываются по правам, а без прав их просто нет -->
 <section class="grid gap-5 lg:grid-cols-3">
   <div class="space-y-5 lg:col-span-2">
     <div class="panel">
       <div class="panel-head"><h2 class="panel-title">Личные данные</h2></div>
       <form id="profileForm" class="panel-body space-y-4" novalidate>
         <div id="profileFields" class="grid gap-4 sm:grid-cols-2"></div>
-        <div class="flex items-center gap-3">
-          <button type="submit" id="profileSave" class="btn btn-primary btn-sm" data-label-idle="Сохранить" data-label-loading="Сохраняем…">Сохранить</button>
+        <div id="profileActions" class="flex items-center gap-3">
+          <button type="submit" id="profileSave" class="btn btn-primary btn-sm" data-requires="canEditOwnProfile" hidden data-label-idle="Сохранить" data-label-loading="Сохраняем…">Сохранить</button>
         </div>
       </form>
     </div>
 
-    <div class="panel">
+    <div id="passwordPanel" class="panel" data-requires="canChangeOwnPassword" hidden>
       <div class="panel-head"><h2 class="panel-title">Смена пароля</h2></div>
       <form id="passwordForm" class="panel-body space-y-4" novalidate>
         <div id="passwordFields" class="grid gap-4 sm:grid-cols-2"></div>

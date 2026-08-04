@@ -15,7 +15,30 @@ export const USER = PC.user || {};
 export const CATALOG = PC.catalog || {};
 
 export const isAdmin = USER.role === 'admin';
+export const isManager = USER.role === 'manager';
 export const isTeacher = USER.role === 'teacher';
+
+/**
+ * Плоский набор булевых флагов от сервера: canManageUsers, canViewAllStudents и прочие.
+ * Ролей стало три, и завязываться в интерфейсе на роль больше нельзя — иначе каждая
+ * новая роль требует правки всех модулей. Роль остаётся только там, где ветка
+ * действительно «чисто админская».
+ */
+export const PERMISSIONS = PC.permissions || {};
+
+/** Есть ли право. Строгое сравнение: отсутствующий флаг — это «нельзя», а не undefined. */
+export function can(name) {
+  return PERMISSIONS[name] === true;
+}
+
+/**
+ * Подпись роли по справочнику: захардкоженный тернарник «Администратор / Преподаватель»
+ * подписывал бы управляющего преподавателем.
+ */
+export function roleLabel(role) {
+  const found = (CATALOG.roles || []).find((item) => item.id === role);
+  return found ? found.label : role || '—';
+}
 
 // ---------------------------------------------------------------- запросы
 
@@ -475,11 +498,14 @@ export function readForm(root) {
 
 // --------------------------------------------------------- модальное окно
 
-let openModals = 0;
+// Стек открытых модалок (в порядке открытия). Нужен вместо счётчика: если поверх модалки
+// открыть ещё одну, обработчик клавиш нижней модалки не должен перехватывать Tab/Escape —
+// иначе фокус запирается в уже неактивном окне и до элементов верхней модалки не добраться.
+const modalStack = [];
 
 /** Открыто ли сейчас модальное окно — фоновым обновлениям под ним делать нечего. */
 export function isModalOpen() {
-  return openModals > 0;
+  return modalStack.length > 0;
 }
 
 /**
@@ -488,6 +514,7 @@ export function isModalOpen() {
  */
 export function openModal({ title, subtitle = '', body, actions = [], size = 'max-w-xl', onClose = null }) {
   const previousFocus = document.activeElement;
+  const entry = {};
 
   const bodyNode = h('div', { class: 'modal-body' }, body);
   const footNode = actions.length > 0 ? h('div', { class: 'modal-foot' }, actions) : null;
@@ -517,11 +544,17 @@ export function openModal({ title, subtitle = '', body, actions = [], size = 'ma
   );
 
   function close() {
+    // Фокус возвращаем, только если закрывается верхушка стека: если под этой модалкой
+    // уже открыта другая (закрыли не по порядку), previousFocus указывает на элемент
+    // за ещё активным окном — фокусом там владеет модалка, что осталась открытой сверху.
+    const wasTop = modalStack[modalStack.length - 1] === entry;
+
     backdrop.remove();
-    openModals = Math.max(0, openModals - 1);
-    if (openModals === 0) document.body.classList.remove('overflow-hidden');
+    const index = modalStack.indexOf(entry);
+    if (index !== -1) modalStack.splice(index, 1);
+    if (modalStack.length === 0) document.body.classList.remove('overflow-hidden');
     document.removeEventListener('keydown', onKeyDown, true);
-    if (previousFocus && document.contains(previousFocus)) previousFocus.focus();
+    if (wasTop && previousFocus && document.contains(previousFocus)) previousFocus.focus();
     if (onClose) onClose();
   }
 
@@ -532,6 +565,10 @@ export function openModal({ title, subtitle = '', body, actions = [], size = 'ma
   }
 
   function onKeyDown(event) {
+    // Пока поверх этой модалки открыта другая, её обработчик молчит — активна
+    // только верхушка стека.
+    if (modalStack[modalStack.length - 1] !== entry) return;
+
     if (event.key === 'Escape') {
       event.preventDefault();
       close();
@@ -565,7 +602,7 @@ export function openModal({ title, subtitle = '', body, actions = [], size = 'ma
 
   document.body.append(backdrop);
   document.body.classList.add('overflow-hidden');
-  openModals += 1;
+  modalStack.push(entry);
 
   const firstControl = focusable()[0];
   if (firstControl) firstControl.focus();
@@ -587,6 +624,48 @@ export function modalButton(label, { kind = 'outline', onClick, loadingLabel } =
     dataset: loadingLabel ? { labelIdle: label, labelLoading: loadingLabel } : { labelIdle: label },
     text: label,
     on: onClick ? { click: onClick } : {},
+  });
+}
+
+/**
+ * Подтверждение важного действия (удаление, блокировка и т. п.) — стилизованная
+ * замена window.confirm(): у него нет ни тёмной темы, ни фирменного вида, а на части
+ * платформ подпись кнопок вообще не переводится на русский.
+ *
+ * Возвращает Promise<boolean>: true — нажали кнопку подтверждения. Отмена кнопкой
+ * «Отмена», крестиком, Esc или кликом по подложке — во всех случаях false, как и
+ * у window.confirm(). Поверх уже открытой модалки эта встаёт сама: стек модалок
+ * из openModal уже поддерживает вложенность (тот же приём — openConvert в
+ * applications.js), достаточно просто вызвать confirmModal изнутри обработчика.
+ */
+export function confirmModal(message, { title = 'Подтверждение', confirmLabel = 'Удалить', cancelLabel = 'Отмена', kind = 'danger' } = {}) {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const confirmButton = modalButton(confirmLabel, {
+      kind,
+      onClick: () => {
+        settled = true;
+        resolve(true);
+        modal.close();
+      },
+    });
+    const cancelButton = modalButton(cancelLabel, {
+      onClick: () => {
+        settled = true;
+        resolve(false);
+        modal.close();
+      },
+    });
+
+    const modal = openModal({
+      title,
+      body: h('p', { class: 'text-sm leading-relaxed text-ink/80', text: message }),
+      actions: [confirmButton, cancelButton],
+      onClose: () => {
+        if (!settled) resolve(false);
+      },
+    });
   });
 }
 

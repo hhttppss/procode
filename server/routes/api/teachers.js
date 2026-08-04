@@ -2,13 +2,15 @@
 
 /**
  * Модуль «Преподаватели» — только для администратора (проверка стоит на роутере).
- * Здесь же заводятся учётные записи: логин, пароль, блокировка, ставка.
+ * Здесь же заводятся учётные записи любой роли: логин, пароль, блокировка, ставка.
+ * Управляющему этот раздел закрыт целиком — сотрудниками распоряжается администратор.
  */
 
 const express = require('express');
 
 const access = require('../../domain/access');
 const audit = require('../../models/audit');
+const catalog = require('../../domain/catalog');
 const db = require('../../db');
 const lessons = require('../../models/lessons');
 const notifications = require('../../models/notifications');
@@ -124,7 +126,9 @@ router.post(
     const result = await users.create({
       login: body.login,
       password: body.password,
-      role: body.role === 'admin' ? 'admin' : 'teacher',
+      // Роль сверяется со справочником, а не с парой «админ или преподаватель»:
+      // иначе новая роль молча превращалась бы в преподавателя.
+      role: catalog.ROLE_IDS.includes(body.role) ? body.role : 'teacher',
       name: body.name,
       phone: body.phone,
       email: body.email,
@@ -184,30 +188,46 @@ router.patch(
     if (has('active')) patch.active = Boolean(body.active);
 
     if (has('role')) {
-      if (!['admin', 'teacher'].includes(body.role)) errors.role = 'Неизвестная роль.';
+      if (!catalog.ROLE_IDS.includes(body.role)) errors.role = 'Неизвестная роль.';
       else patch.role = body.role;
-    }
-
-    // Последний администратор не должен уметь разжаловать или заблокировать сам себя:
-    // иначе в систему будет некому войти.
-    const losesAdmin = (patch.role && patch.role !== 'admin') || patch.active === false;
-    if (current.role === 'admin' && losesAdmin) {
-      const admins = await users.listByRole('admin');
-      const otherActiveAdmins = admins.filter((user) => user.id !== current.id && user.active);
-      if (otherActiveAdmins.length === 0) {
-        errors.role = 'Это единственный активный администратор — сначала назначьте другого.';
-      }
     }
 
     if (patchRejected(res, errors, patch)) return;
 
-    const updated = await users.update(current.id, patch);
+    // Последний администратор не должен уметь разжаловать или заблокировать сам себя —
+    // проверка «остаётся ли ещё активный админ» и само изменение идут одной транзакцией:
+    // раздельными вызовами два одновременных запроса могли разжаловать/заблокировать
+    // обоих последних администраторов разом (в систему стало бы некому войти).
+    const result = await db.transaction(['users'], (tx) => {
+      const record = tx.users.getById(current.id);
+      if (!record) return { ok: false, status: 404, message: 'Сотрудник не найден.' };
 
-    const changes = audit.diff(current, updated, [
+      // Условие смотрит не «стал ли преподавателем», а «перестал ли быть администратором»:
+      // перевод в управляющие отнимает админские права ровно так же.
+      const losesAdmin = (patch.role && patch.role !== 'admin') || patch.active === false;
+      if (losesAdmin && access.isLastActiveAdmin(tx.users.list(), record.id)) {
+        return {
+          ok: false,
+          errors: { role: 'Это единственный активный администратор — сначала назначьте другого.' },
+        };
+      }
+
+      return { ok: true, before: record, updated: tx.users.update(record.id, patch) };
+    });
+
+    if (!result.ok) {
+      if (result.errors) return failValidation(res, result.errors);
+      return fail(res, result.status, result.message);
+    }
+
+    const { before, updated } = result;
+
+    const changes = audit.diff(before, updated, [
       ...EDITABLE.map(({ field, label }) => {
         if (field === 'active') return { field, label, format: (value) => (value ? 'разрешён' : 'заблокирован') };
         if (field === 'courses') return { field, label, format: (value) => value.join(', ') };
         if (field === 'rate') return { field, label, format: (value) => `${value} ₽` };
+        if (field === 'role') return { field, label, format: (value) => catalog.labelOf(catalog.ROLES, value) };
         return { field, label };
       }),
     ]);
@@ -247,25 +267,38 @@ router.delete(
 
     if (teacher.id === req.user.id) return fail(res, 400, 'Нельзя удалить собственную учётную запись.');
 
-    if (teacher.role === 'admin') {
-      const admins = await users.listByRole('admin');
-      if (admins.filter((user) => user.id !== teacher.id && user.active).length === 0) {
-        return fail(res, 400, 'Это единственный активный администратор — сначала назначьте другого.');
-      }
-    }
+    // Последний администратор не должен уметь удалить сам себя — проверка и удаление
+    // идут одной транзакцией: раздельными вызовами два одновременных запроса могли
+    // удалить обоих последних администраторов разом (в систему стало бы некому войти).
+    //
+    // Занятия читаются здесь же, а не отдельным вызовом до транзакции: порядок отказов
+    // важен. Последний администратор с расписанием должен услышать «сначала назначьте
+    // другого», а не «перенесите занятия» — перенос ему всё равно ничего не даст.
+    const result = await db.transaction(['users', 'lessons'], (tx) => {
+      const record = tx.users.getById(teacher.id);
+      if (!record) return { ok: false, status: 404, message: 'Сотрудник не найден.' };
 
-    const teacherLessons = await lessons.listByTeacher(teacher.id);
-    if (teacherLessons.some((lesson) => lesson.status === 'planned')) {
-      return fail(
-        res,
-        409,
-        'У сотрудника есть запланированные занятия. Перенесите их на другого преподавателя или отмените.'
-      );
-    }
+      if (access.isLastActiveAdmin(tx.users.list(), record.id)) {
+        return { ok: false, status: 400, message: 'Это единственный активный администратор — сначала назначьте другого.' };
+      }
+
+      const planned = tx.lessons.find((lesson) => lesson.teacherId === record.id && lesson.status === 'planned');
+      if (planned) {
+        return {
+          ok: false,
+          status: 409,
+          message: 'У сотрудника есть запланированные занятия. Перенесите их на другого преподавателя или отмените.',
+        };
+      }
+
+      tx.users.remove(record.id);
+      return { ok: true };
+    });
+
+    if (!result.ok) return fail(res, result.status, result.message);
 
     await students.detachTeacher(teacher.id);
     await notifications.removeForUser(teacher.id);
-    await users.remove(teacher.id);
     await audit.log({
       entity: 'user',
       entityId: teacher.id,

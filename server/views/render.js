@@ -7,6 +7,10 @@
  * и «Финансы» просто нет. Это не заменяет проверок в API, а дополняет их — интерфейс
  * не показывает того, чего человек всё равно не сможет открыть.
  *
+ * По той же причине вместе со страницей уезжает permissions — набор флагов из domain/access.js.
+ * Интерфейс рисует кнопки и поля по ним, но это лишь отражение серверных правил:
+ * API проверяет права заново на каждом запросе, независимо от того, что показано на экране.
+ *
  * Шаблоны читаются с диска один раз и кэшируются: страниц немного, а лишние обращения
  * к файловой системе на каждый запрос ни к чему.
  */
@@ -130,6 +134,7 @@ async function renderApp({ user, module: moduleName, view, script, title, headin
 
   const bootstrap = {
     user: access.selfProfile(user),
+    permissions: access.clientPermissions(user),
     catalog: catalog.clientCatalog(),
     page: pageView,
     ...data,

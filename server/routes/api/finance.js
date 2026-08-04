@@ -1,16 +1,21 @@
 'use strict';
 
 /**
- * Модуль «Финансы» — только для администратора (проверка стоит на роутере).
+ * Модуль «Финансы» — для администратора и управляющего (проверка стоит на роутере).
  *
  * Доходы — оплаты учеников. Расходы — начисления преподавателям и прочие траты.
  * Начисление считается автоматически: ставка преподавателя × число проведённых занятий
- * за период. Пока администратор не нажал «Начислить», это лишь расчёт; после нажатия
- * появляется запись расхода, и повторно за тот же период начислить уже не предложат.
+ * за период. Пока «Начислить» не нажали, это лишь расчёт; после нажатия появляется
+ * запись расхода, и повторно за тот же период начислить уже не предложат.
+ *
+ * Саму ставку здесь не меняют ни при каких условиях: она правится только в модуле
+ * «Преподаватели» (/app/api/teachers), закрытом для управляющего. Здесь ставка —
+ * входное значение расчёта, а не настройка.
  */
 
 const express = require('express');
 
+const audit = require('../../models/audit');
 const catalog = require('../../domain/catalog');
 const db = require('../../db');
 const finance = require('../../models/finance');
@@ -244,8 +249,25 @@ router.post(
 router.delete(
   '/payments/:id',
   wrap(async (req, res) => {
-    const removed = await finance.payments.remove(req.params.id);
-    if (!removed) return fail(res, 404, 'Оплата не найдена.');
+    const payment = await finance.payments.getById(req.params.id);
+    if (!payment) return fail(res, 404, 'Оплата не найдена.');
+
+    // Гонка двух одновременных запросов на удаление одной и той же записи: getById
+    // выше её ещё видит у обоих, а remove() — уже нет у второго. Без этой проверки
+    // оба ответили бы ok:true и оба написали бы audit.log об одном и том же удалении.
+    if (!(await finance.payments.remove(payment.id))) return fail(res, 404, 'Оплата не найдена.');
+
+    // Логируем на карточке ученика — там уже есть история изменений (историю оплаты
+    // после удаления самой оплаты иначе нигде не найти).
+    const student = await students.getById(payment.studentId);
+    await audit.log({
+      entity: 'student',
+      entityId: payment.studentId,
+      action: 'delete',
+      actor: req.user,
+      comment: `Удалена оплата ${payment.amount} ₽ от ${payment.date}${student ? '' : ' (ученик не найден)'}`,
+    });
+
     return res.json({ ok: true });
   })
 );
@@ -287,8 +309,23 @@ router.post(
 router.delete(
   '/expenses/:id',
   wrap(async (req, res) => {
-    const removed = await finance.expenses.remove(req.params.id);
-    if (!removed) return fail(res, 404, 'Расход не найден.');
+    const expense = await finance.expenses.getById(req.params.id);
+    if (!expense) return fail(res, 404, 'Расход не найден.');
+
+    // См. комментарий в DELETE /payments/:id — та же гонка на удвоение audit.log.
+    if (!(await finance.expenses.remove(expense.id))) return fail(res, 404, 'Расход не найден.');
+
+    // entity 'expense' пока нигде не отображается (нет карточки/истории расходов) —
+    // как и записи с entity 'user' (teachers.js), это задел под будущий общий журнал.
+    const categoryLabel = catalog.labelOf(catalog.EXPENSE_CATEGORIES, expense.category);
+    await audit.log({
+      entity: 'expense',
+      entityId: expense.id,
+      action: 'delete',
+      actor: req.user,
+      comment: `Удалён расход: ${categoryLabel}, ${expense.amount} ₽ от ${expense.date}`,
+    });
+
     return res.json({ ok: true });
   })
 );

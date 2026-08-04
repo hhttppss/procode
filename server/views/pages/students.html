@@ -1,38 +1,46 @@
-<!-- Ученики. Администратор видит всех и правит карточки, преподаватель — только своих, на просмотр -->
+<!-- Ученики. Кто видит всех и правит карточки, решают права: разметка раскрывается по data-requires -->
 <section class="space-y-5">
   <div id="statusTiles" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
 
   <form id="filters" class="panel p-4 sm:p-5" role="search">
-    <div class="grid gap-3 lg:grid-cols-12">
-      <div class="lg:col-span-3">
+    <!-- Шесть контролов: на мобильном в столбец, на планшете по два, на десктопе по три в ряд.
+         Шесть в одну строку не влезают — «Поиск» и «Возраст» становились бы нечитаемо узкими. -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+      <div class="lg:col-span-4">
         <label class="field" for="filterSearch">
           <span class="field-label">Поиск</span>
           <input id="filterSearch" name="q" type="search" class="field-input" placeholder="Имя ученика или группа" autocomplete="off" />
         </label>
       </div>
-      <div class="lg:col-span-3">
+      <div class="lg:col-span-4">
         <label class="field" for="filterCourse">
           <span class="field-label">Направление</span>
           <select id="filterCourse" name="course" class="field-input"></select>
         </label>
       </div>
-      <div class="lg:col-span-2" data-admin-only hidden>
+      <div class="lg:col-span-4">
+        <label class="field" for="filterGroup">
+          <span class="field-label">Группа</span>
+          <select id="filterGroup" name="group" class="field-input"></select>
+        </label>
+      </div>
+      <div class="lg:col-span-4" data-requires="canViewAllStudents" hidden>
         <label class="field" for="filterTeacher">
           <span class="field-label">Преподаватель</span>
           <select id="filterTeacher" name="teacherId" class="field-input"></select>
         </label>
       </div>
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-4">
         <label class="field" for="filterStatus">
           <span class="field-label">Статус</span>
           <select id="filterStatus" name="status" class="field-input"></select>
         </label>
       </div>
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-4">
         <span class="field-label">Возраст</span>
         <div class="flex items-center gap-2">
-          <input id="filterAgeFrom" name="ageFrom" type="number" min="3" max="25" class="field-input px-3" placeholder="от" />
-          <input id="filterAgeTo" name="ageTo" type="number" min="3" max="25" class="field-input px-3" placeholder="до" />
+          <input id="filterAgeFrom" name="ageFrom" type="number" min="3" max="25" class="field-input px-3" placeholder="от" aria-label="Возраст от" />
+          <input id="filterAgeTo" name="ageTo" type="number" min="3" max="25" class="field-input px-3" placeholder="до" aria-label="Возраст до" />
         </div>
       </div>
     </div>
@@ -41,7 +49,7 @@
       <p id="resultSummary" class="text-sm text-muted" aria-live="polite"></p>
       <div class="flex flex-wrap gap-2">
         <button type="button" id="resetFilters" class="btn btn-outline btn-sm">Сбросить фильтры</button>
-        <button type="button" id="addStudent" class="btn btn-primary btn-sm" data-admin-only hidden>Новый ученик</button>
+        <button type="button" id="addStudent" class="btn btn-primary btn-sm" data-requires="canEditStudent" hidden>Новый ученик</button>
       </div>
     </div>
   </form>

@@ -3,9 +3,9 @@
 /**
  * Модуль «Ученики» — список и фильтры.
  *
- * Одна страница на две роли. Преподавателю сервер отдаёт только его учеников
+ * Одна страница на все роли. Преподавателю сервер отдаёт только его учеников
  * и урезанный набор полей, поэтому в таблице для него просто нет колонок,
- * которых нет в данных.
+ * которых нет в данных. Что показывать, решают права (can), а не роль.
  */
 
 import './shell.js';
@@ -13,12 +13,12 @@ import {
   CATALOG,
   api,
   byId,
+  can,
   clear,
   debounce,
   emptyBlock,
   formatAge,
   h,
-  isAdmin,
   plural,
   statusBadge,
   toast,
@@ -27,11 +27,19 @@ import { openStudentForm } from './student-form.js';
 
 const STATUSES = CATALOG.studentStatuses || [];
 
-const state = { q: '', course: '', teacherId: '', status: '', ageFrom: '', ageTo: '' };
+/** Значение фильтра «Без группы» — то же, что понимает сервер. */
+const NO_GROUP = '__none__';
+
+/** Ключ хранилища: выбранная группа должна пережить перезагрузку и возврат из карточки. */
+const GROUP_STORAGE_KEY = 'pc.students.group';
+
+const state = { q: '', course: '', group: '', teacherId: '', status: '', ageFrom: '', ageTo: '' };
 
 let items = [];
 let counts = { all: 0 };
 let byCourse = [];
+let groups = [];
+let withoutGroup = 0;
 let teachers = [];
 let requestToken = 0;
 
@@ -44,6 +52,7 @@ const summary = byId('resultSummary');
 
 const searchInput = byId('filterSearch');
 const courseSelect = byId('filterCourse');
+const groupSelect = byId('filterGroup');
 const teacherSelect = byId('filterTeacher');
 const statusSelect = byId('filterStatus');
 const ageFromInput = byId('filterAgeFrom');
@@ -51,10 +60,43 @@ const ageToInput = byId('filterAgeTo');
 
 const teacherName = new Map();
 
+// Всех учеников школы видят администратор и управляющий, преподаватель — только своих.
+const seesAllStudents = can('canViewAllStudents');
+
+// --------------------------------------------------- запоминание группы
+
+/** Адрес важнее хранилища: ссылка на отфильтрованный список должна открываться как есть. */
+function restoreGroup() {
+  const fromUrl = new URLSearchParams(window.location.search).get('group');
+  if (fromUrl !== null) return fromUrl;
+
+  try {
+    return window.localStorage.getItem(GROUP_STORAGE_KEY) || '';
+  } catch {
+    // Хранилище может быть недоступно (приватный режим) — тогда фильтр просто не переживёт перезагрузку.
+    return '';
+  }
+}
+
+function rememberGroup() {
+  // replaceState, а не pushState: выбор фильтра не должен плодить записи в истории «назад».
+  const url = new URL(window.location.href);
+  if (state.group) url.searchParams.set('group', state.group);
+  else url.searchParams.delete('group');
+  window.history.replaceState(null, '', url);
+
+  try {
+    if (state.group) window.localStorage.setItem(GROUP_STORAGE_KEY, state.group);
+    else window.localStorage.removeItem(GROUP_STORAGE_KEY);
+  } catch {
+    // Не беда: выбор всё равно остался в адресе страницы.
+  }
+}
+
 // ------------------------------------------------------------------ плитки
 
 function buildTiles() {
-  const tiles = [{ id: 'all', label: isAdmin ? 'Всего учеников' : 'Мои ученики' }, ...STATUSES];
+  const tiles = [{ id: 'all', label: seesAllStudents ? 'Всего учеников' : 'Мои ученики' }, ...STATUSES];
 
   tilesRoot.replaceChildren(
     ...tiles.map((tile) =>
@@ -140,10 +182,16 @@ function createCard(student) {
         ]),
         statusBadge(STATUSES, student.status),
       ]),
-      h('div', { class: 'mt-3 space-y-1 text-sm text-muted' }, [
-        h('p', { text: student.course || 'Направление не выбрано' }),
-        h('p', { text: teacherName.get(student.teacherId) || 'Преподаватель не назначен' }),
-      ]),
+      h(
+        'div',
+        { class: 'mt-3 space-y-1 text-sm text-muted' },
+        [
+          h('p', { text: student.course || 'Направление не выбрано' }),
+          // Группа — только когда она есть: в мобильной карточке лишняя строка «—» бесполезна.
+          student.group ? h('p', { text: `Группа: ${student.group}` }) : null,
+          h('p', { text: teacherName.get(student.teacherId) || 'Преподаватель не назначен' }),
+        ].filter(Boolean)
+      ),
     ]
   );
 }
@@ -163,8 +211,11 @@ function renderCourses() {
       h(
         'button',
         {
-          class: 'flex items-center justify-between gap-3 rounded-xl border border-ink/[0.07] px-3.5 py-2.5 text-left transition hover:border-cobalt/25 hover:bg-mist/50',
-          attrs: { type: 'button' },
+          // min-w-0 и на кнопке, и на подписи: без него ни ячейка сетки, ни элемент flex
+          // не сжимаются меньше своего текста, и «Веб-разработка (HTML, CSS, JavaScript)»
+          // растягивает страницу вместо того, чтобы обрезаться многоточием.
+          class: 'flex min-w-0 items-center justify-between gap-3 rounded-xl border border-ink/[0.07] px-3.5 py-2.5 text-left transition hover:border-cobalt/25 hover:bg-mist/50',
+          attrs: { type: 'button', title: row.course },
           on: {
             click: () => {
               state.course = row.course === 'Без направления' ? '' : row.course;
@@ -174,11 +225,46 @@ function renderCourses() {
           },
         },
         [
-          h('span', { class: 'truncate text-sm', text: row.course }),
-          h('span', { class: 'font-mono text-sm font-semibold tnum', text: String(row.count) }),
+          h('span', { class: 'min-w-0 truncate text-sm', text: row.course }),
+          h('span', { class: 'shrink-0 font-mono text-sm font-semibold tnum', text: String(row.count) }),
         ]
       )
     )
+  );
+}
+
+/**
+ * Опции собираются из data.groups: справочника групп нет, группа — свободная строка
+ * в карточке ученика. Список меняется вместе с остальными фильтрами, поэтому
+ * пересобирается после каждой загрузки. Возвращает false, если выбранной группы
+ * в новом списке уже нет.
+ */
+function renderGroupOptions() {
+  const options = [
+    h('option', { text: 'Все группы', attrs: { value: '' } }),
+    ...groups.map((row) => h('option', { text: row.group, attrs: { value: row.group } })),
+  ];
+
+  if (withoutGroup > 0) options.push(h('option', { text: 'Без группы', attrs: { value: NO_GROUP } }));
+
+  groupSelect.replaceChildren(...options);
+
+  const exists = options.some((option) => option.value === state.group);
+  groupSelect.value = exists ? state.group : '';
+  return exists;
+}
+
+/** Пустой список звучит по-разному: у преподавателя это «никого не закрепили», у остальных — «никого нет». */
+function emptyListBlock() {
+  if (!seesAllStudents) {
+    return emptyBlock('За вами пока никто не закреплён', 'Как только администратор закрепит за вами ученика, он появится здесь.');
+  }
+
+  return emptyBlock(
+    'Учеников пока нет',
+    can('canEditStudent')
+      ? 'Заведите карточку вручную или конвертируйте заявку с сайта.'
+      : 'Карточки появятся здесь, как только их заведут.'
   );
 }
 
@@ -195,15 +281,7 @@ function render(errorMessage) {
 
   if (isEmpty) {
     if (errorMessage) stateBox.append(emptyBlock('Не удалось загрузить учеников', errorMessage));
-    else if ((counts.all ?? 0) === 0)
-      stateBox.append(
-        emptyBlock(
-          isAdmin ? 'Учеников пока нет' : 'За вами пока никто не закреплён',
-          isAdmin
-            ? 'Заведите карточку вручную или конвертируйте заявку с сайта.'
-            : 'Как только администратор закрепит за вами ученика, он появится здесь.'
-        )
-      );
+    else if ((counts.all ?? 0) === 0) stateBox.append(emptyListBlock());
     else stateBox.append(emptyBlock('Ничего не нашлось', 'Измените условия поиска или сбросьте фильтры.'));
   }
 
@@ -222,6 +300,18 @@ async function load() {
     items = data.items || [];
     counts = data.counts || { all: items.length };
     byCourse = data.byCourse || [];
+    groups = data.groups || [];
+    withoutGroup = data.withoutGroup || 0;
+
+    // Выбранная группа могла исчезнуть (последнего ученика из неё перевели) —
+    // тогда фильтр сбрасывается и список перезагружается уже без него.
+    if (!renderGroupOptions()) {
+      state.group = '';
+      rememberGroup();
+      await load();
+      return;
+    }
+
     render();
   } catch (error) {
     if (token !== requestToken) return;
@@ -243,6 +333,9 @@ function initFilters() {
     ...STATUSES.map((status) => h('option', { text: status.label, attrs: { value: status.id } }))
   );
 
+  // Группы приезжают с данными, но до первой загрузки список не должен быть пустым.
+  groupSelect.replaceChildren(h('option', { text: 'Все группы', attrs: { value: '' } }));
+
   searchInput.addEventListener(
     'input',
     debounce(() => {
@@ -262,6 +355,12 @@ function initFilters() {
     });
   }
 
+  groupSelect.addEventListener('change', () => {
+    state.group = groupSelect.value;
+    rememberGroup();
+    load();
+  });
+
   for (const [node, key] of [
     [ageFromInput, 'ageFrom'],
     [ageToInput, 'ageTo'],
@@ -276,13 +375,16 @@ function initFilters() {
   }
 
   byId('resetFilters').addEventListener('click', () => {
-    Object.assign(state, { q: '', course: '', teacherId: '', status: '', ageFrom: '', ageTo: '' });
+    Object.assign(state, { q: '', course: '', group: '', teacherId: '', status: '', ageFrom: '', ageTo: '' });
     searchInput.value = '';
     courseSelect.value = '';
+    groupSelect.value = '';
     statusSelect.value = '';
     teacherSelect.value = '';
     ageFromInput.value = '';
     ageToInput.value = '';
+    // Сброс чистит и адрес, и хранилище — иначе группа вернулась бы при следующем заходе.
+    rememberGroup();
     load();
   });
 
@@ -302,6 +404,8 @@ function initFilters() {
 // -------------------------------------------------------------------- старт
 
 async function init() {
+  state.group = restoreGroup();
+
   buildTiles();
   initFilters();
 

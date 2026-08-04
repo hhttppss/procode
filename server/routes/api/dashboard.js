@@ -2,8 +2,11 @@
 
 /**
  * Дашборд. Ответ зависит от роли:
- *   администратор — сводка по школе (ученики, заявки, преподаватели, оборот, занятия);
+ *   администратор и управляющий — сводка по школе (ученики, заявки, преподаватели,
+ *     оборот, занятия); отличается только ключ role, по которому клиент выбирает вид;
  *   преподаватель — только его собственные показатели, без финансов.
+ *
+ * Ключ role в ответе есть всегда: без него клиент не знает, какую сводку ему прислали.
  */
 
 const express = require('express');
@@ -19,7 +22,12 @@ const { wrap, readPeriod, dayBoundsMs, today } = require('./helpers');
 
 const router = express.Router();
 
-async function adminDashboard(user, period) {
+/**
+ * Сводка по школе. Одна и та же для администратора и управляющего: оба ведут заявки,
+ * учеников, расписание и финансы. Ставок и начислений по ним здесь нет — эти цифры
+ * живут в модуле «Преподаватели», закрытом для управляющего.
+ */
+async function schoolDashboard(user, period) {
   const bounds = dayBoundsMs(period.from, period.to);
 
   const [allStudents, allApplications, staff, periodLessons, payments, expenses] = await Promise.all([
@@ -58,7 +66,7 @@ async function adminDashboard(user, period) {
   }
 
   return {
-    role: 'admin',
+    role: access.isManager(user) ? 'manager' : 'admin',
     period,
     students: {
       total: allStudents.length,
@@ -137,8 +145,11 @@ router.get(
   '/',
   wrap(async (req, res) => {
     const period = readPeriod(req.query);
-    const payload = access.isAdmin(req.user)
-      ? await adminDashboard(req.user, period)
+
+    // Выбор по праву на финансы, а не по роли: в сводке по школе есть оборот,
+    // и это самая закрытая её часть.
+    const payload = access.canViewFinance(req.user)
+      ? await schoolDashboard(req.user, period)
       : await teacherDashboard(req.user, period);
 
     res.json({ ok: true, ...payload });

@@ -3,7 +3,8 @@
 /**
  * Модуль «Расписание».
  *
- * Администратор: создание (в том числе повторяющихся серий), правка, перенос, удаление.
+ * Администратор и управляющий: видят все занятия, создают (в том числе повторяющиеся
+ * серии), правят, переносят и удаляют.
  * Преподаватель: видит только свои занятия и отмечает их итог — проведено / отменено /
  * перенесено, комментарий и посещаемость. Дату, состав учеников и ссылку он не меняет:
  * список разрешённых полей задан в domain/access.js и проверяется здесь.
@@ -90,6 +91,7 @@ async function validateLesson(body, { partial = false } = {}) {
 
   if (has('title')) value.title = db.asText(body.title, 120);
   if (has('course')) value.course = db.asText(body.course, 120);
+  if (has('group')) value.group = db.asText(body.group, 80);
   if (has('adminComment')) value.adminComment = db.asText(body.adminComment, lessons.MAX_COMMENT);
 
   if (!partial || has('link')) {
@@ -135,14 +137,16 @@ router.get(
     const to = db.asDay(req.query.to);
     const status = catalog.LESSON_STATUS_IDS.includes(req.query.status) ? req.query.status : '';
     const studentId = db.asText(req.query.studentId);
+    const group = db.asText(req.query.group, 80);
 
     // Преподаватель получает только свои занятия — параметр teacherId для него игнорируется.
-    const teacherId = access.isAdmin(req.user) ? db.asText(req.query.teacherId) : req.user.id;
+    const teacherId = access.canViewAllLessons(req.user) ? db.asText(req.query.teacherId) : req.user.id;
 
     const items = await lessons.listBetween(from, to, (lesson) => {
       if (teacherId && lesson.teacherId !== teacherId) return false;
       if (status && lesson.status !== status) return false;
       if (studentId && !lesson.studentIds.includes(studentId)) return false;
+      if (group && lesson.group !== group) return false;
       return true;
     });
 
@@ -161,7 +165,7 @@ router.get(
     const now = new Date();
     const from = today();
 
-    const scope = access.isAdmin(req.user)
+    const scope = access.canViewAllLessons(req.user)
       ? await lessons.listBetween(from, null)
       : (await lessons.listByTeacher(req.user.id)).filter((lesson) => lesson.date >= from);
 
@@ -189,7 +193,9 @@ router.get(
 router.post(
   '/',
   wrap(async (req, res) => {
-    if (!access.canManageLessons(req.user)) return fail(res, 403, 'Расписание составляет администратор.');
+    if (!access.canManageLessons(req.user)) {
+      return fail(res, 403, 'Расписание составляет администратор или управляющий.');
+    }
 
     const body = bodyOf(req);
     const { value, errors } = await validateLesson(body);
@@ -225,6 +231,7 @@ router.post(
       studentIds: value.studentIds,
       title: value.title || '',
       course: value.course || '',
+      group: value.group || '',
       format: value.format,
       link: value.link || '',
       adminComment: value.adminComment || '',
@@ -257,11 +264,11 @@ router.patch(
     }
 
     const body = bodyOf(req);
-    const isAdmin = access.isAdmin(req.user);
+    const managesSchedule = access.canManageLessons(req.user);
 
     // Преподавателю оставляем ровно три поля. Всё остальное из тела запроса отбрасывается,
     // даже если он отправит его вручную.
-    const source = isAdmin
+    const source = managesSchedule
       ? body
       : Object.fromEntries(
           Object.entries(body).filter(([key]) => access.TEACHER_LESSON_FIELDS.includes(key))
@@ -300,6 +307,7 @@ router.patch(
       { field: 'startTime', label: 'Время' },
       { field: 'durationMin', label: 'Длительность' },
       { field: 'teacherId', label: 'Преподаватель' },
+      { field: 'group', label: 'Группа' },
       { field: 'format', label: 'Формат', format: (v) => catalog.labelOf(catalog.LESSON_FORMATS, v) },
       { field: 'status', label: 'Статус', format: (v) => catalog.labelOf(catalog.LESSON_STATUSES, v) },
       { field: 'link', label: 'Ссылка' },
@@ -308,8 +316,9 @@ router.patch(
 
     await audit.log({ entity: 'lesson', entityId: updated.id, action: 'update', actor: req.user, changes });
 
-    // Преподавателя предупреждаем только об изменениях, сделанных администратором.
-    if (isAdmin) {
+    // Преподавателя предупреждаем только об изменениях, сделанных администрацией:
+    // о собственной отметке «проведено» уведомлять его самого незачем.
+    if (managesSchedule) {
       const moved = current.date !== updated.date || current.startTime !== updated.startTime;
       const teacherChanged = current.teacherId !== updated.teacherId;
 
@@ -332,7 +341,9 @@ router.patch(
 router.delete(
   '/:id',
   wrap(async (req, res) => {
-    if (!access.canManageLessons(req.user)) return fail(res, 403, 'Удалять занятия может только администратор.');
+    if (!access.canManageLessons(req.user)) {
+      return fail(res, 403, 'Удалять занятия может администратор или управляющий.');
+    }
 
     const lesson = await lessons.getById(req.params.id);
     if (!lesson) return fail(res, 404, 'Занятие не найдено.');

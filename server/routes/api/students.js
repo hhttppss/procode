@@ -4,6 +4,9 @@
  * Модуль «Ученики».
  *
  * Администратор — полный CRUD и все поля карточки.
+ * Управляющий — то же самое, кроме одного: преподавателя ученику он не назначает.
+ * Поле teacherId от него не принимается молча, а возвращается ошибкой — иначе
+ * «сохранил, а закрепление не поменялось» выглядело бы как сбой.
  * Преподаватель — только просмотр закреплённых за ним учеников, и только тех полей,
  * которые ему положены: контакты родителей, оплаты и заметки администрации
  * отсекаются в domain/access.js ещё до формирования ответа.
@@ -23,9 +26,14 @@ const lessons = require('../../models/lessons');
 const notify = require('../../domain/notify');
 const students = require('../../models/students');
 const users = require('../../models/users');
-const { wrap, fail, failValidation, bodyOf, fieldsOf, patchRejected } = require('./helpers');
+const { wrap, fail, failValidation, bodyOf, fieldsOf, hasField, patchRejected } = require('./helpers');
 
 const router = express.Router();
+
+/** Значение фильтра «ученики без группы»: пустая строка означала бы «любая группа». */
+const NO_GROUP = '__none__';
+
+const TEACHER_ASSIGN_DENIED = 'Назначать преподавателей ученикам может только администратор.';
 
 /** Поля карточки и их подписи — используются и для истории изменений, и в валидации. */
 const FIELDS = [
@@ -108,20 +116,38 @@ async function ensureTeacherExists(teacherId) {
   return Boolean(teacher) && teacher.role === 'teacher';
 }
 
+/**
+ * Прислал ли teacherId тот, кому назначать преподавателей нельзя.
+ * Поле не отбрасывается молча: управляющий должен получить внятный отказ, а не карточку,
+ * в которой сохранилось всё, кроме закрепления.
+ *
+ * @param {boolean} options.onlyFilled  при создании пустое значение — это «не назначен»,
+ *                                      отказывать за него не за что; при правке даже снятие
+ *                                      преподавателя меняет закрепление и потому запрещено.
+ */
+function teacherFieldDenied(user, body, { onlyFilled = false } = {}) {
+  if (!hasField(body, 'teacherId')) return false;
+  if (access.canAssignTeacher(user)) return false;
+  if (onlyFilled && !db.asText(body.teacherId)) return false;
+  return true;
+}
+
 // ---------------------------------------------------------------- список
 
 router.get(
   '/',
   wrap(async (req, res) => {
-    const isAdmin = access.isAdmin(req.user);
+    const seesEveryone = access.canViewAllStudents(req.user);
+    const seesDetails = access.canViewStudentDetails(req.user);
 
     // Преподаватель физически не может расширить выборку: список берётся по его id,
     // а не по параметру из запроса.
-    const all = isAdmin ? await students.list() : await students.listByTeacher(req.user.id);
+    const all = seesEveryone ? await students.list() : await students.listByTeacher(req.user.id);
 
     const search = db.asText(req.query.q, 100).toLowerCase();
     const course = db.asText(req.query.course, 120);
-    const teacherId = isAdmin ? db.asText(req.query.teacherId) : '';
+    const group = db.asText(req.query.group, 80);
+    const teacherId = seesEveryone ? db.asText(req.query.teacherId) : '';
     const status = catalog.STUDENT_STATUS_IDS.includes(req.query.status) ? req.query.status : '';
     const ageFrom = db.asInt(req.query.ageFrom);
     const ageTo = db.asInt(req.query.ageTo);
@@ -131,13 +157,17 @@ router.get(
       if (teacherId && student.teacherId !== teacherId) return false;
       if (status && student.status !== status) return false;
 
+      if (group === NO_GROUP) {
+        if (student.group) return false;
+      } else if (group && student.group !== group) return false;
+
       const age = students.ageOf(student);
       if (ageFrom !== null && (age === null || age < ageFrom)) return false;
       if (ageTo !== null && (age === null || age > ageTo)) return false;
 
       if (search) {
         // Преподаватель ищет только по своим полям — по контактам родителей поиск ему недоступен.
-        const haystack = isAdmin
+        const haystack = seesDetails
           ? [student.name, student.course, student.group, student.parentName, student.parentPhone]
           : [student.name, student.course, student.group];
         if (!haystack.join(' ').toLowerCase().includes(search)) return false;
@@ -160,6 +190,10 @@ router.get(
       total: filtered.length,
       counts,
       byCourse: byCourseCounts(all),
+      // Списки для фильтров считаются по всей видимой области, а не по отфильтрованной
+      // выборке: иначе выбранная группа осталась бы в списке единственным пунктом.
+      groups: groupCounts(all),
+      withoutGroup: all.filter((student) => !student.group).length,
     });
   })
 );
@@ -171,6 +205,20 @@ function byCourseCounts(items) {
     map.set(key, (map.get(key) || 0) + 1);
   }
   return [...map.entries()].map(([course, count]) => ({ course, count })).sort((a, b) => b.count - a.count);
+}
+
+/** Группы с числом учеников. Ученики без группы сюда не попадают — для них отдельный счётчик. */
+function groupCounts(items) {
+  const map = new Map();
+  for (const student of items) {
+    if (!student.group) continue;
+    map.set(student.group, (map.get(student.group) || 0) + 1);
+  }
+
+  // numeric: иначе «Группа 10» встала бы перед «Группой 2» — строки сравниваются посимвольно.
+  return [...map.entries()]
+    .map(([group, count]) => ({ group, count }))
+    .sort((a, b) => a.group.localeCompare(b.group, 'ru', { numeric: true }));
 }
 
 // ------------------------------------------------------------- карточка
@@ -188,7 +236,7 @@ router.get(
 
     // Преподаватель видит только те занятия ученика, которые вёл сам.
     const allLessons = await lessons.listByStudent(student.id);
-    const visibleLessons = access.isAdmin(req.user)
+    const visibleLessons = access.canViewAllLessons(req.user)
       ? allLessons
       : allLessons.filter((lesson) => lesson.teacherId === req.user.id);
 
@@ -220,8 +268,9 @@ router.get(
       },
     };
 
-    // История оплат и история правок карточки — только администратору.
-    if (access.isAdmin(req.user)) {
+    // История оплат и история правок карточки — только тем, кому открыты и остальные
+    // непубличные поля карточки (администратор, управляющий).
+    if (access.canViewStudentDetails(req.user)) {
       payload.payments = await finance.paymentsByStudent(student.id);
       payload.paid = finance.sum(payload.payments);
       payload.history = await audit.listFor('student', student.id);
@@ -236,9 +285,16 @@ router.get(
 router.post(
   '/',
   wrap(async (req, res) => {
-    if (!access.canEditStudent(req.user)) return fail(res, 403, 'Карточки учеников заводит администратор.');
+    if (!access.canEditStudent(req.user)) {
+      return fail(res, 403, 'Заводить карточки учеников может администратор или управляющий.');
+    }
 
-    const { patch, errors } = readPatch(bodyOf(req));
+    const body = bodyOf(req);
+    if (teacherFieldDenied(req.user, body, { onlyFilled: true })) {
+      return failValidation(res, { teacherId: TEACHER_ASSIGN_DENIED });
+    }
+
+    const { patch, errors } = readPatch(body);
     if (!patch.name) errors.name = errors.name || 'Укажите имя ребёнка.';
     if (patch.teacherId && !(await ensureTeacherExists(patch.teacherId))) {
       errors.teacherId = 'Преподаватель не найден.';
@@ -265,13 +321,18 @@ router.patch(
   '/:id',
   wrap(async (req, res) => {
     if (!access.canEditStudent(req.user)) {
-      return fail(res, 403, 'Редактировать карточки учеников может только администратор.');
+      return fail(res, 403, 'Редактировать карточки учеников может администратор или управляющий.');
+    }
+
+    const body = bodyOf(req);
+    if (teacherFieldDenied(req.user, body)) {
+      return failValidation(res, { teacherId: TEACHER_ASSIGN_DENIED });
     }
 
     const current = await students.getById(req.params.id);
     if (!current) return fail(res, 404, 'Ученик не найден.');
 
-    const { patch, errors } = readPatch(bodyOf(req));
+    const { patch, errors } = readPatch(body);
     if (patch.teacherId && !(await ensureTeacherExists(patch.teacherId))) {
       errors.teacherId = 'Преподаватель не найден.';
     }
@@ -316,7 +377,7 @@ router.delete(
   '/:id',
   wrap(async (req, res) => {
     if (!access.canEditStudent(req.user)) {
-      return fail(res, 403, 'Удалять карточки учеников может только администратор.');
+      return fail(res, 403, 'Удалять карточки учеников может администратор или управляющий.');
     }
 
     const student = await students.getById(req.params.id);
