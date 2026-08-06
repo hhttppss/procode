@@ -33,6 +33,11 @@ app.set('trust proxy', config.trustProxy);
  * index.html придётся отдавать через шаблонизатор, а не как статический файл.
  * Даже в таком виде политика запрещает загрузку скриптов и стилей с чужих доменов,
  * подмену <base> и встраивание сайта в чужой фрейм.
+ *
+ * fonts.googleapis.com и fonts.gstatic.com из style-src/font-src убраны вместе
+ * с переездом шрифтов на свой хостинг (public/fonts): разрешения стали мёртвыми,
+ * а чужой домен в CSP — лишняя поверхность. Если шрифты снова поедут в Google,
+ * их придётся вернуть, иначе браузер молча заблокирует загрузку.
  */
 const CSP = [
   "default-src 'self'",
@@ -41,8 +46,8 @@ const CSP = [
   "frame-ancestors 'none'",
   "form-action 'self'",
   "img-src 'self' data:",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "connect-src 'self'",
 ].join('; ');

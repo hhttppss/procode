@@ -33,8 +33,8 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
   const canAssignTeacher = can('canAssignTeacher');
 
   const main = h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
-    field({ label: 'Имя ребёнка', name: 'name', value: value.name || '', required: true }),
-    field({ label: 'Дата рождения', name: 'birthDate', type: 'date', value: value.birthDate || '' }),
+    field({ label: 'Имя ребёнка', name: 'name', value: value.name || '', required: true, autocomplete: 'name' }),
+    field({ label: 'Дата рождения', name: 'birthDate', type: 'date', value: value.birthDate || '', autocomplete: 'bday' }),
     field({
       label: 'Возраст',
       name: 'age',
@@ -72,9 +72,9 @@ export function openStudentForm({ student = null, teachers = [], onSaved }) {
   ]);
 
   const parents = h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
-    field({ label: 'ФИО родителя', name: 'parentName', value: value.parentName || '' }),
-    field({ label: 'Телефон родителя', name: 'parentPhone', type: 'tel', value: value.parentPhone || '' }),
-    field({ label: 'Email родителя', name: 'parentEmail', type: 'email', value: value.parentEmail || '' }),
+    field({ label: 'ФИО родителя', name: 'parentName', value: value.parentName || '', autocomplete: 'name' }),
+    field({ label: 'Телефон родителя', name: 'parentPhone', type: 'tel', value: value.parentPhone || '', autocomplete: 'tel' }),
+    field({ label: 'Email родителя', name: 'parentEmail', type: 'email', value: value.parentEmail || '', autocomplete: 'email' }),
     field({ label: 'Второй родитель', name: 'parentSecond', value: value.parentSecond || '', placeholder: 'ФИО и телефон' }),
     field({ label: 'Стоимость занятия, ₽', name: 'lessonPrice', type: 'number', min: 0, value: value.lessonPrice ?? '' }),
   ]);

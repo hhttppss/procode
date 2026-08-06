@@ -314,6 +314,25 @@ export function shiftMonth(day, deltaMonths) {
   return toDay(date);
 }
 
+/**
+ * Тот же месяц ± deltaMonths, но с сохранением числа (а не сброшенным на 1-е) —
+ * нужна там, где переставляют не «якорь периода» (там 1-е число не важно),
+ * а сфокусированную клавиатурой дату: PageUp/PageDown в сетке месяца должны
+ * переносить фокус на тот же день соседнего месяца, а не всегда на 1-е.
+ * Число клэмпится по длине целевого месяца (31 января + 1 месяц → 28/29 февраля).
+ */
+export function shiftMonthKeepDay(day, deltaMonths) {
+  const date = new Date(`${day}T00:00:00`);
+  const dayOfMonth = date.getDate();
+
+  date.setDate(1);
+  date.setMonth(date.getMonth() + deltaMonths);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(dayOfMonth, lastDay));
+
+  return toDay(date);
+}
+
 export function startOfWeek(day) {
   const date = new Date(`${day}T00:00:00`);
   const weekday = (date.getDay() + 6) % 7;
@@ -389,6 +408,7 @@ export function field({
   min = null,
   max = null,
   step = null,
+  autocomplete = '',
 }) {
   const id = `f_${name}_${Math.random().toString(36).slice(2, 8)}`;
   // Подпись ошибки и подсказка связываются с полем через aria-describedby:
@@ -399,7 +419,10 @@ export function field({
   let control;
 
   if (options) {
-    control = h('select', { class: 'field-input', attrs: { id, name, 'aria-describedby': describedBy } });
+    control = h('select', {
+      class: 'field-input',
+      attrs: { id, name, 'aria-describedby': describedBy, autocomplete: autocomplete || null },
+    });
     for (const option of options) {
       control.append(
         h('option', {
@@ -412,7 +435,7 @@ export function field({
   } else if (type === 'textarea') {
     control = h('textarea', {
       class: 'field-input resize-y',
-      attrs: { id, name, rows: rows || 3, placeholder, 'aria-describedby': describedBy },
+      attrs: { id, name, rows: rows || 3, placeholder, 'aria-describedby': describedBy, autocomplete: autocomplete || null },
       props: { value: value ?? '' },
     });
   } else if (type === 'checkbox') {
@@ -424,7 +447,7 @@ export function field({
   } else {
     control = h('input', {
       class: 'field-input',
-      attrs: { id, name, type, placeholder, 'aria-describedby': describedBy },
+      attrs: { id, name, type, placeholder, 'aria-describedby': describedBy, autocomplete: autocomplete || null },
       props: { value: value ?? '' },
     });
     if (min !== null) control.min = min;

@@ -40,8 +40,8 @@ function renderProfile() {
   // Без права правки — те же поля, но только на чтение: человек видит, что о нём знает
   // система, и понимает, к кому идти за изменениями.
   profileFields.replaceChildren(
-    field({ label: 'ФИО', name: 'name', value: profile.name, required: true, disabled: !canEditProfile }),
-    field({ label: 'Телефон', name: 'phone', type: 'tel', value: profile.phone, disabled: !canEditProfile }),
+    field({ label: 'ФИО', name: 'name', value: profile.name, required: true, disabled: !canEditProfile, autocomplete: 'name' }),
+    field({ label: 'Телефон', name: 'phone', type: 'tel', value: profile.phone, disabled: !canEditProfile, autocomplete: 'tel' }),
     field({
       label: 'Email',
       name: 'email',
@@ -49,14 +49,15 @@ function renderProfile() {
       value: profile.email,
       className: 'sm:col-span-2',
       disabled: !canEditProfile,
+      autocomplete: 'email',
     })
   );
 }
 
 function renderPasswordFields() {
   passwordFields.replaceChildren(
-    field({ label: 'Текущий пароль', name: 'current', type: 'password', required: true }),
-    field({ label: 'Новый пароль', name: 'next', type: 'password', required: true, hint: 'Минимум 6 символов' })
+    field({ label: 'Текущий пароль', name: 'current', type: 'password', required: true, autocomplete: 'current-password' }),
+    field({ label: 'Новый пароль', name: 'next', type: 'password', required: true, hint: 'Минимум 6 символов', autocomplete: 'new-password' })
   );
 }
 

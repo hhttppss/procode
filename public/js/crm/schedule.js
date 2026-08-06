@@ -33,6 +33,7 @@ import {
   setButtonLoading,
   shiftDay,
   shiftMonth,
+  shiftMonthKeepDay,
   showFieldErrors,
   startOfMonth,
   startOfWeek,
@@ -74,6 +75,10 @@ let teachers = [];
 let students = [];
 const teacherName = new Map();
 const studentName = new Map();
+
+// Бродячий tabindex сетки месяца: активная (табулируемая) дата — не обязательно
+// «сегодня», а последняя, на которую переводили фокус стрелками или кликом мыши.
+let focusedDay = todayDay();
 
 const calendar = byId('calendar');
 const stateBox = byId('stateBox');
@@ -179,7 +184,7 @@ function renderWeek() {
           class: `flex w-full items-baseline justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-mist/60 ${
             day === today ? 'bg-cobalt-100/60' : ''
           }`,
-          attrs: { type: 'button' },
+          attrs: { type: 'button', 'aria-current': day === today ? 'date' : null },
           on: {
             click: () => {
               state.view = 'day';
@@ -207,16 +212,97 @@ function renderWeek() {
   return h('div', { class: 'grid gap-2 sm:grid-cols-7' }, columns);
 }
 
+/**
+ * Ставит фокус на кнопку даты в сетке месяца и переносит бродячий tabindex на неё:
+ * без явного переноса старая кнопка так и осталась бы единственной доступной по Tab,
+ * даже если её саму заменил свежий рендер после load().
+ */
+function focusMonthDay(day) {
+  const previous = calendar.querySelector('[data-day][tabindex="0"]');
+  if (previous && previous.dataset.day !== day) previous.setAttribute('tabindex', '-1');
+
+  const target = calendar.querySelector(`[data-day="${day}"]`);
+  if (!target) return;
+  target.setAttribute('tabindex', '0');
+  target.focus();
+}
+
+/**
+ * Стрелки, Home/End, PageUp/PageDown по сетке месяца — паттерн ARIA date grid.
+ * Слушатель один на весь грид: делегирование избавляет от 42 отдельных обработчиков,
+ * которые пришлось бы навешивать и снимать при каждом рендере.
+ */
+function onMonthGridKeydown(event) {
+  if (state.view !== 'month') return;
+  if (!event.target || !event.target.dataset || !event.target.dataset.day) return;
+
+  let nextDay = null;
+  switch (event.key) {
+    case 'ArrowLeft':
+      nextDay = shiftDay(focusedDay, -1);
+      break;
+    case 'ArrowRight':
+      nextDay = shiftDay(focusedDay, 1);
+      break;
+    case 'ArrowUp':
+      nextDay = shiftDay(focusedDay, -7);
+      break;
+    case 'ArrowDown':
+      nextDay = shiftDay(focusedDay, 7);
+      break;
+    case 'Home':
+      nextDay = startOfWeek(focusedDay);
+      break;
+    case 'End':
+      nextDay = shiftDay(startOfWeek(focusedDay), 6);
+      break;
+    case 'PageUp':
+      // shiftMonth (не Keep) обнуляет число на «1-е» — это верно для перестановки
+      // якоря периода (shiftPeriod), но здесь переносится сфокусированный день,
+      // и человек ожидает оказаться на том же числе соседнего месяца, а не на 1-м.
+      nextDay = shiftMonthKeepDay(focusedDay, -1);
+      break;
+    case 'PageDown':
+      nextDay = shiftMonthKeepDay(focusedDay, 1);
+      break;
+    default:
+      return;
+  }
+
+  event.preventDefault();
+  focusedDay = nextDay;
+
+  // Сравниваем с границами уже отрисованной сетки (6 недель), а не periodRange():
+  // тот отдаёт границы календарного месяца, а «блёклые» дни соседних месяцев по
+  // краям сетки физически уже на экране — переход на них не должен запускать
+  // перезагрузку и не должен вызывать перерисовку сетки, «прыгающей» на новый месяц.
+  const gridStart = startOfWeek(startOfMonth(state.anchor));
+  const gridEnd = shiftDay(gridStart, 41);
+
+  if (focusedDay < gridStart || focusedDay > gridEnd) {
+    // Новый день вне отрисованной сетки: переставляем период и ждём перерисовки —
+    // render() внутри load() пересобирает DOM синхронно, но сам load() асинхронен.
+    state.anchor = focusedDay;
+    load().then(() => focusMonthDay(focusedDay));
+  } else {
+    focusMonthDay(focusedDay);
+  }
+}
+
 function renderMonthGrid() {
   const first = startOfMonth(state.anchor);
   const gridStart = startOfWeek(first);
   const today = todayDay();
   const month = first.slice(0, 7);
 
-  const headers = WEEKDAYS_SHORT.map((label) => h('div', { class: 'cal-head', text: label }));
+  const gridDays = Array.from({ length: 42 }, (unused, index) => shiftDay(gridStart, index));
+  // Активная (табулируемая) дата — фокус с прошлого раза, если он ещё виден в этой
+  // сетке; иначе первая ячейка, чтобы Tab всегда вёл на реальную кнопку.
+  const activeDay = gridDays.includes(focusedDay) ? focusedDay : gridDays[0];
 
-  const cells = Array.from({ length: 42 }, (unused, index) => {
-    const day = shiftDay(gridStart, index);
+  const headers = WEEKDAYS_SHORT.map((label) => h('div', { class: 'cal-head', attrs: { role: 'columnheader' }, text: label }));
+
+  const cells = gridDays.map((day) => {
     const dayLessons = lessons.filter((lesson) => lesson.date === day);
     const outside = day.slice(0, 7) !== month;
 
@@ -224,15 +310,21 @@ function renderMonthGrid() {
     if (outside) classes.push('cal-day-muted');
     if (day === today) classes.push('cal-day-today');
 
-    return h('div', { class: classes.join(' ') }, [
+    return h('div', { class: classes.join(' '), attrs: { role: 'gridcell' } }, [
       h(
         'button',
         {
           class: 'mb-1 block w-full text-right font-mono text-xs font-semibold tnum text-muted transition hover:text-ink',
-          attrs: { type: 'button' },
+          attrs: {
+            type: 'button',
+            tabindex: day === activeDay ? 0 : -1,
+            'aria-current': day === today ? 'date' : null,
+          },
+          dataset: { day },
           text: day.slice(8),
           on: {
             click: () => {
+              focusedDay = day;
               state.view = 'day';
               state.anchor = day;
               syncViewButtons();
@@ -248,10 +340,24 @@ function renderMonthGrid() {
     ]);
   });
 
-  return h('div', {}, [
-    h('div', { class: 'grid grid-cols-7 gap-1' }, headers),
-    h('div', { class: 'mt-1 grid grid-cols-7 gap-1' }, cells),
+  // 42 ячейки — 6 недель по 7 дней. display:contents на обёртке недели не влияет
+  // на CSS Grid родителя (ячейки остаются его прямыми grid-элементами), но даёт
+  // правильную ARIA-структуру: role="row" с семью role="gridcell" внутри.
+  const weekRows = Array.from({ length: 6 }, (unused, week) =>
+    h('div', { class: 'contents', attrs: { role: 'row' } }, cells.slice(week * 7, week * 7 + 7))
+  );
+
+  const grid = h('div', { attrs: { role: 'grid', 'aria-label': `Календарь на ${monthTitle(first)}` } }, [
+    h('div', { class: 'grid grid-cols-7 gap-1', attrs: { role: 'row' } }, headers),
+    // role="rowgroup" — обязательный по ARIA промежуточный узел между grid и его row:
+    // без него 6 недель оказались бы висящим блоком, который часть скринридеров
+    // не распознаёт как часть таблицы, и стрелочная навигация по строкам ломается.
+    h('div', { class: 'mt-1 grid grid-cols-7 gap-1', attrs: { role: 'rowgroup' } }, weekRows),
   ]);
+
+  grid.addEventListener('keydown', onMonthGridKeydown);
+
+  return grid;
 }
 
 /**
@@ -323,7 +429,14 @@ function render(errorMessage) {
   calendar.replaceChildren(view);
 }
 
+// Номер последнего запущенного load() — быстрое удержание PageUp/PageDown в сетке
+// месяца (автоповтор клавиши уходит быстрее, чем успевает ответить сервер) иначе
+// могло бы применить устаревший ответ поверх более свежего запроса, если тот
+// вернётся раньше. Ответ с чужим номером просто отбрасывается.
+let loadToken = 0;
+
 async function load() {
+  const token = ++loadToken;
   const range = periodRange();
 
   try {
@@ -336,9 +449,11 @@ async function load() {
         status: state.status,
       },
     });
+    if (token !== loadToken) return;
     lessons = data.items || [];
     render();
   } catch (error) {
+    if (token !== loadToken) return;
     lessons = [];
     render(error.message);
   }

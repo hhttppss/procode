@@ -58,6 +58,9 @@ export function openTeacherForm({ teacher = null, onSaved }) {
     required: !isEdit,
     disabled: isEdit,
     hint: isEdit ? 'Логин менять нельзя' : 'Латиница и цифры, минимум 3 символа',
+    // Логин чужой учётной записи, а не своей: 'off', чтобы браузер администратора
+    // не подставлял сюда сохранённый логин самого администратора.
+    autocomplete: 'off',
   });
 
   const passwordField = field({
@@ -65,6 +68,9 @@ export function openTeacherForm({ teacher = null, onSaved }) {
     name: 'password',
     type: 'password',
     hint: 'Минимум 6 символов. Передайте его сотруднику лично',
+    // 'new-password', а не 'current-password': администратор задаёт пароль
+    // другому сотруднику, а не вводит свой собственный.
+    autocomplete: 'new-password',
   });
 
   const roleField = field({
@@ -79,12 +85,12 @@ export function openTeacherForm({ teacher = null, onSaved }) {
 
   const form = h('div', { class: 'space-y-4' }, [
     h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
-      field({ label: 'ФИО', name: 'name', value: value.name || '', required: true }),
+      field({ label: 'ФИО', name: 'name', value: value.name || '', required: true, autocomplete: 'name' }),
       roleField,
       loginField,
       isEdit ? null : passwordField,
-      field({ label: 'Телефон', name: 'phone', type: 'tel', value: value.phone || '' }),
-      field({ label: 'Email', name: 'email', type: 'email', value: value.email || '' }),
+      field({ label: 'Телефон', name: 'phone', type: 'tel', value: value.phone || '', autocomplete: 'tel' }),
+      field({ label: 'Email', name: 'email', type: 'email', value: value.email || '', autocomplete: 'email' }),
       field({
         label: 'Ставка за занятие, ₽',
         name: 'rate',
@@ -153,7 +159,14 @@ export function openTeacherForm({ teacher = null, onSaved }) {
 
 export function openPasswordForm(teacher, onSaved) {
   const form = h('div', { class: 'space-y-4' }, [
-    field({ label: 'Новый пароль', name: 'password', type: 'password', required: true, hint: 'Минимум 6 символов' }),
+    field({
+      label: 'Новый пароль',
+      name: 'password',
+      type: 'password',
+      required: true,
+      hint: 'Минимум 6 символов',
+      autocomplete: 'new-password',
+    }),
   ]);
 
   const saveButton = modalButton('Задать пароль', { kind: 'primary', loadingLabel: 'Сохраняем…' });

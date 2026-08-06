@@ -194,6 +194,7 @@ ProCode/
 │   ├── index.html                # лендинг
 │   ├── privacy.html, oferta.html # юридические страницы (заглушки)
 │   ├── css/styles.css            # собранный Tailwind — не редактировать вручную
+│   ├── fonts/                    # свои woff2 (Unbounded, Onest, JetBrains Mono), см. src/input.css
 │   ├── js/landing.js             # поведение лендинга
 │   ├── js/form.js                # отправка формы заявки
 │   ├── js/login.js               # страница входа сотрудников

@@ -438,8 +438,14 @@ function openCard(item) {
 // --------------------------------------------------- конвертация в ученика
 
 function openConvert(item, parentModal) {
-  const nameField = field({ label: 'Имя ребёнка', name: 'name', value: item.childName, required: true });
-  const birthField = field({ label: 'Дата рождения', name: 'birthDate', type: 'date', hint: 'Если известна — возраст будет считаться сам' });
+  const nameField = field({ label: 'Имя ребёнка', name: 'name', value: item.childName, required: true, autocomplete: 'name' });
+  const birthField = field({
+    label: 'Дата рождения',
+    name: 'birthDate',
+    type: 'date',
+    hint: 'Если известна — возраст будет считаться сам',
+    autocomplete: 'bday',
+  });
   const courseField = field({
     label: 'Направление',
     name: 'course',
@@ -459,9 +465,9 @@ function openConvert(item, parentModal) {
     disabled: !canAssignTeacher,
     hint: canAssignTeacher ? '' : 'Преподавателя закрепит администратор',
   });
-  const parentNameField = field({ label: 'ФИО родителя', name: 'parentName', value: item.parentName });
-  const parentPhoneField = field({ label: 'Телефон родителя', name: 'parentPhone', value: item.phone });
-  const parentEmailField = field({ label: 'Email родителя', name: 'parentEmail', value: item.email });
+  const parentNameField = field({ label: 'ФИО родителя', name: 'parentName', value: item.parentName, autocomplete: 'name' });
+  const parentPhoneField = field({ label: 'Телефон родителя', name: 'parentPhone', value: item.phone, autocomplete: 'tel' });
+  const parentEmailField = field({ label: 'Email родителя', name: 'parentEmail', value: item.email, autocomplete: 'email' });
   const priceField = field({ label: 'Стоимость занятия, ₽', name: 'lessonPrice', type: 'number', min: 0, value: '' });
 
   const form = h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [

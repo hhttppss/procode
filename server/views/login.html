@@ -7,12 +7,10 @@
     <title>Вход для сотрудников — ПроКод</title>
 
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Шрифты — свои, из public/fonts; @font-face объявлены в styles.css.
+         Страница входа — один экран целиком: заголовок Unbounded, форма Onest. -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/fonts/unbounded-cyrillic.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/fonts/onest-cyrillic.woff2" />
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
 
