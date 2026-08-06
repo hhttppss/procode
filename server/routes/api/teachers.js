@@ -1,9 +1,12 @@
 'use strict';
 
 /**
- * Модуль «Преподаватели» — только для администратора (проверка стоит на роутере).
- * Здесь же заводятся учётные записи любой роли: логин, пароль, блокировка, ставка.
+ * Модуль «Сотрудники» — только для администратора (проверка стоит на роутере).
+ * Здесь заводятся учётные записи любой роли: логин, пароль, блокировка, ставка, оклад.
  * Управляющему этот раздел закрыт целиком — сотрудниками распоряжается администратор.
+ *
+ * Путь остался /teachers: переименование URL сломало бы сохранённые ссылки и закладки,
+ * а раздел от смены подписи в меню другим не стал.
  */
 
 const express = require('express');
@@ -14,6 +17,7 @@ const catalog = require('../../domain/catalog');
 const db = require('../../db');
 const lessons = require('../../models/lessons');
 const notifications = require('../../models/notifications');
+const payroll = require('../../domain/payroll');
 const students = require('../../models/students');
 const users = require('../../models/users');
 const { wrap, fail, failValidation, bodyOf, fieldsOf, patchRejected, readPeriod } = require('./helpers');
@@ -97,6 +101,12 @@ router.get(
       (lesson) => lesson.status === 'done' && lesson.date >= period.from && lesson.date <= period.to
     );
 
+    // Считает тот же domain/payroll.js, что и «Финансы»: карточка обязана показывать
+    // ровно ту сумму, которая уйдёт в расход по кнопке «Начислить». Карточка открывается
+    // на текущем месяце, поэтому оклад в расчёт обычно входит; за произвольный период
+    // (ссылка с другими from/to) он не начисляется — см. salaryApplies.
+    const calculated = payroll.calculate(teacher, doneInPeriod.length, period);
+
     res.json({
       ok: true,
       item: access.staffForAdmin(teacher),
@@ -105,11 +115,12 @@ router.get(
         .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
       stats,
       period,
-      // Предварительный расчёт начисления: ставка × проведённые занятия за период.
       payroll: {
-        rate: teacher.rate,
-        lessons: doneInPeriod.length,
-        amount: teacher.rate * doneInPeriod.length,
+        rate: calculated.rate,
+        salary: calculated.salary,
+        salaryApplies: calculated.salaryApplies,
+        lessons: calculated.lessons,
+        amount: calculated.amount,
       },
       recentLessons: own.slice(-20).reverse(),
     });
@@ -134,6 +145,7 @@ router.post(
       email: body.email,
       courses: Array.isArray(body.courses) ? body.courses : [],
       rate: body.rate,
+      salary: body.salary,
       note: body.note,
       active: body.active === undefined ? true : Boolean(body.active),
     });
@@ -160,6 +172,7 @@ const EDITABLE = [
   { field: 'email', label: 'Email' },
   { field: 'courses', label: 'Направления' },
   { field: 'rate', label: 'Ставка за занятие' },
+  { field: 'salary', label: 'Оклад' },
   { field: 'note', label: 'Заметка' },
   { field: 'active', label: 'Доступ' },
   { field: 'role', label: 'Роль' },
@@ -184,6 +197,7 @@ router.patch(
     if (has('email')) patch.email = db.asText(body.email, 120);
     if (has('courses')) patch.courses = db.asStringArray(body.courses);
     if (has('rate')) patch.rate = db.asMoney(body.rate);
+    if (has('salary')) patch.salary = db.asMoney(body.salary);
     if (has('note')) patch.note = db.asText(body.note, 2000);
     if (has('active')) patch.active = Boolean(body.active);
 
@@ -226,7 +240,7 @@ router.patch(
       ...EDITABLE.map(({ field, label }) => {
         if (field === 'active') return { field, label, format: (value) => (value ? 'разрешён' : 'заблокирован') };
         if (field === 'courses') return { field, label, format: (value) => value.join(', ') };
-        if (field === 'rate') return { field, label, format: (value) => `${value} ₽` };
+        if (field === 'rate' || field === 'salary') return { field, label, format: (value) => `${value} ₽` };
         if (field === 'role') return { field, label, format: (value) => catalog.labelOf(catalog.ROLES, value) };
         return { field, label };
       }),

@@ -118,7 +118,10 @@ const PAYMENT_METHODS = [
 const PAYMENT_METHOD_IDS = PAYMENT_METHODS.map((method) => method.id);
 
 const EXPENSE_CATEGORIES = [
-  { id: 'payroll', label: 'Оплата преподавателям' },
+  // id менять нельзя: он уже лежит в записях расходов и по нему ищутся проведённые
+  // начисления. Подпись общая — в эту категорию попадают и ставки преподавателей,
+  // и оклады управляющих и администраторов.
+  { id: 'payroll', label: 'Зарплата сотрудникам' },
   { id: 'marketing', label: 'Реклама и продвижение' },
   { id: 'software', label: 'Сервисы и лицензии' },
   { id: 'other', label: 'Прочее' },

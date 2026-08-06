@@ -3,7 +3,7 @@
 /**
  * Сборка страниц платформы: общий каркас (layout.html) + разметка модуля (views/pages/*.html).
  *
- * Меню рисуется на сервере по роли: в HTML преподавателя ссылок на «Заявки», «Преподавателей»
+ * Меню рисуется на сервере по роли: в HTML преподавателя ссылок на «Заявки», «Сотрудников»
  * и «Финансы» просто нет. Это не заменяет проверок в API, а дополняет их — интерфейс
  * не показывает того, чего человек всё равно не сможет открыть.
  *
@@ -59,7 +59,7 @@ const NAV_ITEMS = [
   { module: 'dashboard', href: '/app', label: 'Главная' },
   { module: 'applications', href: '/app/applications', label: 'Заявки' },
   { module: 'students', href: '/app/students', label: 'Ученики' },
-  { module: 'teachers', href: '/app/teachers', label: 'Преподаватели' },
+  { module: 'teachers', href: '/app/teachers', label: 'Сотрудники' },
   { module: 'schedule', href: '/app/schedule', label: 'Расписание' },
   { module: 'finance', href: '/app/finance', label: 'Финансы' },
   { module: 'profile', href: '/app/profile', label: 'Профиль' },

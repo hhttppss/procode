@@ -3,23 +3,32 @@
 /**
  * Модуль «Финансы» — для администратора и управляющего (проверка стоит на роутере).
  *
- * Доходы — оплаты учеников. Расходы — начисления преподавателям и прочие траты.
- * Начисление считается автоматически: ставка преподавателя × число проведённых занятий
- * за период. Пока «Начислить» не нажали, это лишь расчёт; после нажатия появляется
- * запись расхода, и повторно за тот же период начислить уже не предложат.
+ * Доходы — оплаты учеников. Расходы — начисления сотрудникам и прочие траты.
+ * Начисление считается автоматически: ставка × число проведённых занятий за период
+ * плюс месячный оклад (правила расчёта — в domain/payroll.js). Оклад есть у любой роли:
+ * иначе администратору и управляющему, у которых занятий нет, начислять было бы нечего.
+ * Пока «Начислить» не нажали, это лишь расчёт; после нажатия появляется запись расхода,
+ * и повторно за тот же период начислить уже не предложат.
  *
- * Саму ставку здесь не меняют ни при каких условиях: она правится только в модуле
- * «Преподаватели» (/app/api/teachers), закрытом для управляющего. Здесь ставка —
- * входное значение расчёта, а не настройка.
+ * Чужая зарплата — не для управляющего. Модуль открыт и ему, но с окладами
+ * администраторов и управляющих работает только администратор: в расчёте эти строки
+ * управляющему не показываются вовсе, а начислить их ему отвечают 403. Управляющий
+ * ведёт преподавателей — тех, чьё начисление считается по занятиям.
+ *
+ * Ни ставку, ни оклад здесь не меняют ни при каких условиях: они правятся только
+ * в модуле «Сотрудники» (/app/api/teachers), закрытом для управляющего. Здесь это
+ * входные значения расчёта, а не настройки.
  */
 
 const express = require('express');
 
+const access = require('../../domain/access');
 const audit = require('../../models/audit');
 const catalog = require('../../domain/catalog');
 const db = require('../../db');
 const finance = require('../../models/finance');
 const lessons = require('../../models/lessons');
+const payroll = require('../../domain/payroll');
 const students = require('../../models/students');
 const users = require('../../models/users');
 const { wrap, fail, failValidation, bodyOf, readPeriod } = require('./helpers');
@@ -61,31 +70,46 @@ function buildSeries(period, payments, expenses) {
   return { byMonth, points: [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key)) };
 }
 
-/** Расчёт начислений: сколько причитается каждому преподавателю за период. */
-function payrollFor(teachers, doneLessons, paidExpenses, period) {
-  return teachers
-    .map((teacher) => {
-      const own = doneLessons.filter((lesson) => lesson.teacherId === teacher.id);
+/**
+ * Расчёт начислений: сколько причитается каждому сотруднику за период.
+ *
+ * Сумма считается тем же domain/payroll.js, что и при самом начислении, — в таблице
+ * стоит ровно та цифра, которая уйдёт в расход по кнопке «Начислить». Отсюда же
+ * приходит salaryApplies: за неполный месяц оклад не начисляется, и интерфейсу нужно
+ * объяснить, почему сумма меньше ожидаемой.
+ */
+function payrollFor(staff, doneLessons, paidExpenses, period) {
+  return staff
+    .map((employee) => {
+      const own = doneLessons.filter((lesson) => lesson.teacherId === employee.id);
       const alreadyPaid = paidExpenses
         .filter(
           (expense) =>
             expense.category === 'payroll' &&
-            expense.teacherId === teacher.id &&
+            expense.teacherId === employee.id &&
             expense.periodFrom === period.from &&
             expense.periodTo === period.to
         )
         .reduce((total, expense) => total + expense.amount, 0);
 
+      const calculated = payroll.calculate(employee, own.length, period);
+
       return {
-        teacherId: teacher.id,
-        name: teacher.name,
-        rate: teacher.rate,
-        lessons: own.length,
-        amount: teacher.rate * own.length,
+        teacherId: employee.id,
+        name: employee.name,
+        role: employee.role,
+        rate: calculated.rate,
+        salary: calculated.salary,
+        salaryMonth: calculated.salaryMonth,
+        salaryApplies: calculated.salaryApplies,
+        lessons: calculated.lessons,
+        amount: calculated.amount,
         alreadyPaid,
       };
     })
-    .filter((row) => row.lessons > 0 || row.alreadyPaid > 0)
+    // Строка нужна, только когда есть за что платить или уже заплатили: иначе в таблицу
+    // попал бы каждый сотрудник без ставки, оклада и занятий — строкой на ноль рублей.
+    .filter((row) => row.lessons > 0 || row.salary > 0 || row.alreadyPaid > 0)
     .sort((a, b) => b.amount - a.amount);
 }
 
@@ -102,6 +126,8 @@ router.get(
       users.list(),
     ]);
 
+    // Отдельный список преподавателей нужен только отчёту по занятиям ниже:
+    // начисления считаются по всем сотрудникам, а вести уроки может лишь преподаватель.
     const teachers = staff.filter((user) => user.role === 'teacher');
     const doneLessons = allLessons.filter((lesson) => lesson.status === 'done');
 
@@ -135,6 +161,15 @@ router.get(
       byCategory.set(expense.category, row);
     }
 
+    // Начисления. Управляющему остаются только преподаватели: сколько получает
+    // администратор — не его дело, поэтому строка убирается целиком, а не «очищается»
+    // от ставки с окладом. Раз строки нет, то и кнопки «Начислить» в интерфейсе не будет,
+    // но полагаемся мы не на это: POST /payroll проверяет то же право заново.
+    const allPayroll = payrollFor(staff, doneLessons, expenses, period);
+    const visiblePayroll = access.canManageRates(req.user)
+      ? allPayroll
+      : allPayroll.filter((row) => row.role === 'teacher');
+
     // Занятия в разрезе преподавателей
     const byTeacher = teachers
       .map((teacher) => {
@@ -165,7 +200,7 @@ router.get(
       byStudent: [...byStudent.values()].sort((a, b) => b.amount - a.amount),
       byCategory: [...byCategory.values()].sort((a, b) => b.amount - a.amount),
       byTeacher,
-      payroll: payrollFor(teachers, doneLessons, expenses, period),
+      payroll: visiblePayroll,
       payments: payments.map((payment) => ({ ...payment, studentName: studentName.get(payment.studentId) || '—' })),
       expenses: expenses.map((expense) => ({
         ...expense,
@@ -330,7 +365,7 @@ router.delete(
   })
 );
 
-// -------------------------------------------------- начисление преподавателю
+// ---------------------------------------------------- начисление сотруднику
 
 router.post(
   '/payroll',
@@ -338,49 +373,90 @@ router.post(
     const body = bodyOf(req);
     const period = readPeriod(body);
 
-    const teacher = await users.getById(db.asText(body.teacherId));
-    if (!teacher || teacher.role !== 'teacher') return failValidation(res, { teacherId: 'Преподаватель не найден.' });
+    // Начислить можно любому сотруднику: у администратора и управляющего занятий нет,
+    // но есть оклад. А вот кому именно — зависит от того, кто начисляет.
+    const employee = await users.getById(db.asText(body.teacherId));
+    if (!employee) return failValidation(res, { teacherId: 'Сотрудник не найден.' });
+
+    // Зарплата администрации — только через администратора: управляющему модуль открыт,
+    // но распоряжаться окладами тех, кто выше или равен ему, он не должен.
+    if (employee.role !== 'teacher' && !access.canManageRates(req.user)) {
+      return fail(res, 403, 'Начислять зарплату администраторам и управляющим может только администратор.');
+    }
 
     const done = await lessons.listBetween(period.from, period.to, (lesson) => {
-      return lesson.teacherId === teacher.id && lesson.status === 'done';
+      return lesson.teacherId === employee.id && lesson.status === 'done';
     });
 
-    const amount = teacher.rate * done.length;
-    if (amount <= 0) {
+    const calculated = payroll.calculate(employee, done.length, period);
+
+    // Отказ объясняем ровно той причиной, по которой вышел ноль: «начислять нечего»
+    // не подсказывает, что делать, а «выберите месяц целиком» — подсказывает.
+    if (calculated.amount <= 0) {
+      if (calculated.salary > 0 && !calculated.salaryApplies) {
+        return failValidation(res, {
+          amount: 'Оклад начисляется только за полный календарный месяц — выберите месяц целиком.',
+        });
+      }
+      if (calculated.rate > 0) {
+        return failValidation(res, { amount: 'За этот период у сотрудника нет проведённых занятий.' });
+      }
       return failValidation(res, {
-        amount: 'За этот период начислять нечего: нет проведённых занятий или не задана ставка.',
+        amount: 'Сотруднику не задан ни оклад, ни ставка за занятие — начислять нечего.',
       });
     }
 
-    // Проверка «за этот период уже начисляли» и сама запись — одной транзакцией.
-    // Раздельными вызовами двойной клик по «Начислить» успевал провести оплату дважды.
-    // Занятия читаем до транзакции: в ней они не меняются.
-    const expense = await db.transaction(['expenses'], (tx) => {
-      const already = tx.expenses.filter(
-        (item) =>
-          item.category === 'payroll' &&
-          item.teacherId === teacher.id &&
-          item.periodFrom === period.from &&
-          item.periodTo === period.to
-      );
-      if (already.length > 0) return null;
+    // Проверки «уже начисляли» и сама запись — одной транзакцией. Раздельными вызовами
+    // двойной клик по «Начислить» успевал провести оплату дважды. Занятия читаем
+    // до транзакции: в ней они не меняются.
+    const result = await db.transaction(['expenses'], (tx) => {
+      const paid = tx.expenses.filter((item) => item.category === 'payroll' && item.teacherId === employee.id);
 
-      return tx.expenses.insert({
-        date: period.to,
-        amount,
-        category: 'payroll',
-        teacherId: teacher.id,
-        periodFrom: period.from,
-        periodTo: period.to,
-        lessonsCount: done.length,
-        comment: `${teacher.name}: ${done.length} занятий × ${teacher.rate} ₽`,
-        createdById: req.user.id,
-      });
+      // Те же границы периода — то же начисление целиком, включая занятия.
+      if (paid.some((item) => item.periodFrom === period.from && item.periodTo === period.to)) {
+        return { ok: false, status: 409, message: 'За этот период начисление уже проведено.' };
+      }
+
+      // Оклад — один на календарный месяц, как бы ни двигали границы периода.
+      // Занятия при этом начислить можно: за них платят отдельно, по факту проведения.
+      const salaryPaid =
+        calculated.salaryApplies && paid.some((item) => item.salaryMonth === calculated.salaryMonth);
+      const salaryPart = salaryPaid ? 0 : calculated.salaryPart;
+      const amount = calculated.byLessons + salaryPart;
+
+      if (amount <= 0) {
+        return { ok: false, status: 409, message: 'Оклад за этот месяц уже начислен, а проведённых занятий за период нет.' };
+      }
+
+      // Из чего сложилась сумма, видно только здесь: расход хранит итог, а ставка
+      // и оклад к моменту следующего просмотра уже могут быть другими.
+      const parts = [];
+      if (calculated.byLessons > 0) parts.push(`${done.length} занятий × ${calculated.rate} ₽`);
+      if (salaryPart > 0) parts.push(`оклад за месяц ${salaryPart} ₽`);
+
+      return {
+        ok: true,
+        expense: tx.expenses.insert({
+          date: period.to,
+          amount,
+          category: 'payroll',
+          // Поле называется teacherId по историческим причинам: под ним уже лежат
+          // проведённые начисления и по нему же ищутся дубли выше. Теперь здесь
+          // может быть любой сотрудник, а не только преподаватель.
+          teacherId: employee.id,
+          periodFrom: period.from,
+          periodTo: period.to,
+          salaryMonth: salaryPart > 0 ? calculated.salaryMonth : '',
+          lessonsCount: done.length,
+          comment: `${employee.name}: ${parts.join(' + ')}`,
+          createdById: req.user.id,
+        }),
+      };
     });
 
-    if (!expense) return fail(res, 409, 'За этот период начисление уже проведено.');
+    if (!result.ok) return fail(res, result.status, result.message);
 
-    res.status(201).json({ ok: true, item: expense });
+    res.status(201).json({ ok: true, item: result.expense });
   })
 );
 

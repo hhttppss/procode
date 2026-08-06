@@ -48,6 +48,9 @@ function normalize(record) {
     courses: db.asStringArray(record.courses),
     // Ставка за одно проведённое занятие, ₽. Видит и меняет только администратор.
     rate: db.asMoney(record.rate),
+    // Оклад за период, ₽ — фиксированная сумма, в отличие от rate (ставки за одно занятие).
+    // У администратора и управляющего занятий нет, поэтому начисление им идёт окладом.
+    salary: db.asMoney(record.salary),
     active: db.asBool(record.active, true),
     note: db.asText(record.note, 2000),
     createdAt,
@@ -159,7 +162,7 @@ async function verify(login, password) {
  * Создаёт учётную запись.
  * @returns {{ok: true, user: object} | {ok: false, errors: object}}
  */
-async function create({ login, password, role, name, phone, email, courses, rate, note, active }) {
+async function create({ login, password, role, name, phone, email, courses, rate, salary, note, active }) {
   const errors = {};
 
   const loginError = checkLoginRules(login);
@@ -198,6 +201,7 @@ async function create({ login, password, role, name, phone, email, courses, rate
       email,
       courses,
       rate,
+      salary,
       note,
       active: active === undefined ? true : active,
     });
@@ -210,7 +214,7 @@ async function create({ login, password, role, name, phone, email, courses, rate
 
 /** Обновляет профиль. Пароль здесь не меняется — для него отдельная функция. */
 async function update(id, patch) {
-  const allowed = ['name', 'phone', 'email', 'courses', 'rate', 'active', 'note', 'role'];
+  const allowed = ['name', 'phone', 'email', 'courses', 'rate', 'salary', 'active', 'note', 'role'];
   const changes = {};
 
   for (const field of allowed) {

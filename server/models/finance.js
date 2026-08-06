@@ -6,9 +6,10 @@
  * Суммы храним целыми рублями: копейки школе не нужны, а дробные числа
  * в JSON копят погрешность при сложении.
  *
- * Начисления преподавателям считаются на лету по ставке и числу проведённых занятий
- * (см. payrollFor в routes/api/finance.js). В расходы они попадают только когда
+ * Начисления сотрудникам считаются на лету по ставке, числу проведённых занятий
+ * и месячному окладу (см. domain/payroll.js). В расходы они попадают только когда
  * администратор нажимает «Начислить» — тогда появляется запись категории payroll.
+ * Её teacherId — любой сотрудник, а не обязательно преподаватель.
  */
 
 const db = require('../db');
@@ -56,6 +57,10 @@ function normalizeExpense(record) {
     teacherId: db.asText(record.teacherId),
     periodFrom: db.asDay(record.periodFrom),
     periodTo: db.asDay(record.periodTo),
+    // Месяц оклада, 'YYYY-MM' — пусто, если в начислении оклада нет. Границ периода
+    // для проверки «оклад за месяц уже выплачен» не хватает: их можно подвинуть,
+    // а зарплата за август у сотрудника одна (см. domain/payroll.js).
+    salaryMonth: db.asText(record.salaryMonth, 7),
     lessonsCount: db.asInt(record.lessonsCount, 0) || 0,
     comment: db.asText(record.comment, 500),
     createdById: db.asText(record.createdById),

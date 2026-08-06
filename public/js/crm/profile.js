@@ -69,8 +69,9 @@ function renderAccount() {
       kv('Логин', profile.login, { mono: true }),
       kv('Роль', roleLabel(USER.role)),
       profile.courses && profile.courses.length > 0 ? kv('Направления', profile.courses.join(', ')) : null,
-      // Ставка приходит в ответе только администратору — у преподавателя строки не будет.
+      // Ставка и оклад приходят в ответе только администратору — у преподавателя строк не будет.
       profile.rate !== undefined ? kv('Ставка за занятие', profile.rate ? formatMoney(profile.rate) : 'не задана') : null,
+      profile.salary !== undefined ? kv('Оклад за период', profile.salary ? formatMoney(profile.salary) : 'не задан') : null,
       kv('Последний вход', profile.lastLoginAt ? formatDateTime(profile.lastLoginAt) : 'это первый вход', { mono: true }),
     ].filter(Boolean)
   );

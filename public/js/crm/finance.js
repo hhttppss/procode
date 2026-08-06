@@ -2,7 +2,7 @@
 
 /**
  * Модуль «Финансы»: оборот за период, оплаты, расходы, автоматический расчёт
- * начислений преподавателям и отчёт по занятиям.
+ * начислений сотрудникам и отчёт по занятиям.
  *
  * График рисуется вручную в SVG — без внешних библиотек: политика безопасности
  * страницы запрещает грузить скрипты с чужих доменов, да и один столбчатый график
@@ -24,6 +24,7 @@ import {
   modalButton,
   openModal,
   readForm,
+  roleLabel,
   setButtonLoading,
   shiftMonth,
   showFieldErrors,
@@ -36,7 +37,9 @@ const period = { from: startOfMonth(todayDay()), to: endOfMonth(todayDay()) };
 
 let summary = null;
 let students = [];
-let teachers = [];
+// Все сотрудники, а не только преподаватели: расход привязывается и к тем, кто занятий
+// не ведёт. Список приходит из /directory готовым — здесь он нужен одной форме расхода.
+let staff = [];
 
 const fromInput = byId('periodFrom');
 const toInput = byId('periodTo');
@@ -165,6 +168,22 @@ function payrollButton(row) {
   return button;
 }
 
+/** Из чего сложилась сумма: занятия по ставке, оклад или и то и другое. */
+function payrollBreakdown(row) {
+  const parts = [];
+  if (row.lessons > 0 && row.rate > 0) parts.push(`${formatMoney(row.rate)} × ${row.lessons}`);
+  if (row.salaryApplies) parts.push(`оклад ${formatMoney(row.salary)}`);
+
+  // Оклад месячный: за произвольный отрезок он не начисляется. Молча показать сумму
+  // без оклада — значит оставить человека гадать, почему она меньше ожидаемой.
+  if (row.salary > 0 && !row.salaryApplies) {
+    const reason = 'оклад начисляется за полный месяц';
+    return parts.length > 0 ? `${parts.join(' + ')} · ${reason}` : `Только оклад, а ${reason}`;
+  }
+
+  return parts.length > 0 ? parts.join(' + ') : 'Ни оклада, ни занятий по ставке';
+}
+
 function renderPayroll() {
   const rows = byId('payrollRows');
   const cards = byId('payrollCards');
@@ -172,18 +191,39 @@ function renderPayroll() {
 
   if (items.length === 0) {
     rows.replaceChildren(
-      h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '6' }, text: 'За период нет проведённых занятий.' }))
+      h('tr', {}, h('td', { class: 'py-6 text-center text-sm text-muted', attrs: { colspan: '7' }, text: 'За период начислять нечего: нет ни проведённых занятий, ни окладов.' }))
     );
-    cards.replaceChildren(emptyBlock('За период нет проведённых занятий', ''));
+    cards.replaceChildren(emptyBlock('За период начислять нечего', 'Нет ни проведённых занятий, ни окладов.'));
     return;
   }
 
   rows.replaceChildren(
     ...items.map((row) =>
       h('tr', {}, [
-        h('td', { class: 'font-medium', text: row.name }),
-        h('td', { class: 'whitespace-nowrap tnum', text: row.rate ? formatMoney(row.rate) : '— ставка не задана' }),
+        h('td', {}, [
+          h('span', { class: 'block font-medium', text: row.name }),
+          // Роль подписываем всем, кроме преподавателей: у администратора и управляющего
+          // занятий нет, и строка с нулём занятий без подписи выглядит ошибкой расчёта.
+          row.role !== 'teacher'
+            ? h('span', { class: 'text-2xs uppercase tracking-wider text-cobalt', text: roleLabel(row.role) })
+            : null,
+        ]),
+        h('td', { class: 'whitespace-nowrap tnum', text: row.rate ? formatMoney(row.rate) : '—' }),
         h('td', { class: 'tnum', text: String(row.lessons) }),
+        h(
+          'td',
+          { class: 'whitespace-nowrap tnum' },
+          row.salary
+            ? [
+                h('span', { class: 'block', text: formatMoney(row.salary) }),
+                // Оклад показан, но в сумму не войдёт — предупреждаем прямо в строке,
+                // иначе «К начислению» выглядит ошибкой расчёта.
+                row.salaryApplies
+                  ? null
+                  : h('span', { class: 'block text-2xs text-muted', text: 'не за полный месяц' }),
+              ]
+            : document.createTextNode('—')
+        ),
         h('td', { class: 'whitespace-nowrap font-semibold tnum', text: formatMoney(row.amount) }),
         h('td', { class: 'whitespace-nowrap tnum text-muted', text: row.alreadyPaid ? formatMoney(row.alreadyPaid) : '—' }),
         h('td', { class: 'text-right' }, payrollButton(row)),
@@ -197,7 +237,10 @@ function renderPayroll() {
         h('div', { class: 'flex items-start justify-between gap-3' }, [
           h('div', { class: 'min-w-0' }, [
             h('p', { class: 'font-display text-base font-semibold', text: row.name }),
-            h('p', { class: 'mt-0.5 text-sm text-muted', text: row.rate ? `${formatMoney(row.rate)} × ${row.lessons}` : 'Ставка не задана' }),
+            row.role !== 'teacher'
+              ? h('p', { class: 'mt-1 text-2xs uppercase tracking-wider text-cobalt', text: roleLabel(row.role) })
+              : null,
+            h('p', { class: 'mt-0.5 text-sm text-muted', text: payrollBreakdown(row) }),
           ]),
           h('p', { class: 'shrink-0 font-display text-base font-semibold tnum', text: formatMoney(row.amount) }),
         ]),
@@ -213,7 +256,7 @@ function renderPayroll() {
 async function createPayroll(row, button) {
   if (
     !(await confirmModal(
-      `Начислить ${formatMoney(row.amount)} преподавателю «${row.name}» за период ${formatDay(period.from)} — ${formatDay(period.to)}?`,
+      `Начислить ${formatMoney(row.amount)} сотруднику «${row.name}» за период ${formatDay(period.from)} — ${formatDay(period.to)}?`,
       { title: 'Начисление зарплаты', confirmLabel: 'Начислить', kind: 'primary' }
     ))
   ) {
@@ -441,10 +484,19 @@ function openPaymentForm() {
 }
 
 function openExpenseForm() {
-  const teacherField = field({
+  // Имя поля teacherId менять нельзя: под ним расход уже лежит в базе (см. models/finance.js).
+  // В списке — все сотрудники; роль подписываем всем, кроме преподавателей, иначе двух
+  // однофамильцев в выпадающем списке не различить.
+  const staffField = field({
     label: 'Сотрудник',
     name: 'teacherId',
-    options: [{ value: '', label: 'Не связан с сотрудником' }, ...teachers.map((teacher) => ({ value: teacher.id, label: teacher.name }))],
+    options: [
+      { value: '', label: 'Не связан с сотрудником' },
+      ...staff.map((employee) => ({
+        value: employee.id,
+        label: employee.role === 'teacher' ? employee.name : `${employee.name} — ${roleLabel(employee.role)}`,
+      })),
+    ],
   });
 
   const form = h('div', { class: 'grid gap-4 sm:grid-cols-2' }, [
@@ -455,7 +507,7 @@ function openExpenseForm() {
     }),
     field({ label: 'Сумма, ₽', name: 'amount', type: 'number', min: 1, required: true }),
     field({ label: 'Дата', name: 'date', type: 'date', value: todayDay() }),
-    teacherField,
+    staffField,
     field({ label: 'Комментарий', name: 'comment', className: 'sm:col-span-2' }),
   ]);
 
@@ -463,7 +515,7 @@ function openExpenseForm() {
 
   const modal = openModal({
     title: 'Новый расход',
-    subtitle: 'Начисления преподавателям удобнее делать кнопкой «Начислить» в таблице выше',
+    subtitle: 'Начисления сотрудникам удобнее делать кнопкой «Начислить» в таблице выше',
     body: form,
     actions: [saveButton, modalButton('Отмена', { onClick: () => modal.close() })],
   });
@@ -545,10 +597,10 @@ async function init() {
   try {
     const directory = await api('/directory');
     students = directory.students || [];
-    teachers = directory.teachers || [];
+    staff = directory.staff || [];
   } catch {
     students = [];
-    teachers = [];
+    staff = [];
   }
 
   await load();

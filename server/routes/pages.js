@@ -90,9 +90,9 @@ router.get(
   '/teachers',
   page({
     module: 'teachers',
-    title: 'Преподаватели',
-    heading: 'Преподаватели',
-    subheading: 'Учётные записи, ставки, нагрузка',
+    title: 'Сотрудники',
+    heading: 'Сотрудники',
+    subheading: 'Учётные записи, роли, ставки и оклады',
   })
 );
 
@@ -101,9 +101,9 @@ router.get(
   page({
     module: 'teachers',
     view: 'teacher-card',
-    title: 'Карточка преподавателя',
-    heading: 'Карточка преподавателя',
-    subheading: 'Профиль, ученики и статистика занятий',
+    title: 'Карточка сотрудника',
+    heading: 'Карточка сотрудника',
+    subheading: 'Профиль, начисление, ученики и статистика занятий',
     data: (req) => ({ teacherId: req.params.id }),
   })
 );
