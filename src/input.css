@@ -680,6 +680,145 @@
     @apply font-display text-4xl font-semibold tnum;
   }
 
+  /* Цена на карточке направления — мельче тарифной, но заметнее служебных строк */
+  .course-price {
+    @apply font-display text-xl font-semibold tnum;
+  }
+
+  /* ---------- Блок-призыв «скидка 15 %» ----------
+     Самый заметный элемент страницы: насыщенный кобальтовый градиент,
+     дисплейный шрифт и абрикосовая кнопка.
+
+     Про цвет текста. Всё, что на градиенте, набрано белым — 6.2:1 на самом
+     светлом его участке (#2B4BF2). Иерархия строится размером и насыщенностью,
+     а не прозрачностью: white/80 дал бы 3.6:1, ниже нормы WCAG 1.4.3 для
+     мелкого текста. Абрикосовый на этом фоне — 3.05:1, поэтому им набраны
+     только крупные «−15 %» и декоративные точки, но никогда строки текста.
+
+     Отдельно про мелкий текст у нижнего края (.promo-note, .promo-terms):
+     считать контраст по чистому градиенту недостаточно, потому что .promo-glow
+     локально высветляет фон. В худшей точке (нижнее пятно поверх #2B4BF2)
+     cobalt-100 давал 3.9:1 — поэтому там white/90, он держит 4.7:1 даже
+     под подсветкой.
+
+     Тень — shadow-lift, а не shadow-glow: синим свечением на сайте подсвечен
+     «экран ученика» в герое, и повтор того же приёма сразу под ним читался бы
+     как второй герой, а не как отдельный блок. */
+  .promo {
+    @apply relative isolate overflow-hidden rounded-4xl text-white shadow-lift;
+    background-image: linear-gradient(115deg, #16289e 0%, #2340de 55%, #2b4bf2 100%);
+  }
+
+  .promo-lg {
+    @apply p-8 sm:p-10 lg:p-14;
+  }
+
+  .promo-sm {
+    @apply p-6 sm:p-8;
+  }
+
+  /* Световые пятна. Нижнее намеренно слабое (0.18, а не 0.35): оно захватывает
+     полосу, где лежат .promo-terms и .promo-note, и на полной альфе высветляло
+     фон до контраста 3.9:1 — ниже нормы для мелкого текста. */
+  .promo-glow {
+    @apply pointer-events-none absolute inset-0 -z-10;
+    background-image: radial-gradient(38% 62% at 88% 6%, rgba(255, 158, 100, 0.3), transparent 70%),
+      radial-gradient(34% 58% at 74% 104%, rgba(123, 147, 255, 0.18), transparent 70%);
+  }
+
+  .promo-eyebrow {
+    @apply inline-flex items-center gap-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-white;
+  }
+
+  .promo-eyebrow::before {
+    content: '//';
+    @apply text-apricot-400;
+  }
+
+  .promo-title {
+    @apply mt-4 font-display text-[1.75rem] font-semibold leading-[1.08] text-white sm:text-4xl lg:text-[2.6rem];
+  }
+
+  .promo-title-sm {
+    @apply font-display text-lg font-semibold leading-snug text-white sm:text-2xl;
+  }
+
+  .promo-lead {
+    @apply mt-5 max-w-xl text-base leading-relaxed text-cobalt-100 sm:text-lg;
+  }
+
+  .promo-points {
+    @apply mt-7 flex flex-wrap gap-x-7 gap-y-2.5;
+  }
+
+  .promo-point {
+    @apply flex items-center gap-2.5 text-sm font-medium text-white;
+  }
+
+  .promo-point::before {
+    content: '';
+    @apply h-1.5 w-1.5 shrink-0 rounded-full bg-apricot;
+  }
+
+  /* Правая колонка крупной версии. Затемнение — не только приём:
+     белый текст на нём получает 8:1 вместо 6.2:1 на чистом градиенте. */
+  .promo-panel {
+    @apply rounded-3xl border border-white/20 bg-ink-900/30 p-6 text-center sm:p-7;
+  }
+
+  .promo-percent {
+    @apply font-display text-6xl font-semibold leading-none text-apricot tnum sm:text-7xl;
+  }
+
+  .promo-code-label {
+    @apply mt-5 block font-mono text-2xs uppercase tracking-[0.18em] text-cobalt-100;
+  }
+
+  /* Пунктирная рамка — метафора купона, но сдержанная: без «отрывного» уголка и теней */
+  .promo-code {
+    @apply mt-2 inline-block rounded-xl border border-dashed border-apricot/70 bg-white/10
+           px-4 py-2 font-mono text-lg font-medium tracking-[0.14em] text-white;
+  }
+
+  .promo-code-inline {
+    @apply whitespace-nowrap rounded-md border border-dashed border-apricot/70 bg-white/10
+           px-2 py-0.5 font-mono text-xs tracking-[0.12em] text-white;
+  }
+
+  .promo-cta {
+    @apply inline-flex items-center justify-center rounded-full bg-apricot px-7 py-4 text-base
+           font-semibold leading-none text-ink shadow-[0_14px_36px_-14px_rgba(255,158,100,0.95)]
+           transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-apricot-600 active:translate-y-0;
+  }
+
+  /* Кнопка компактных повторов. Абрикосовая пилюля на сайте означает «главное
+     действие» (шапка, герой, отправка формы) — четыре её копии подряд размывали
+     бы этот сигнал, поэтому повторы белые. Заметности это не стоит: белое на
+     кобальте — 8.7:1 против 9.2:1 у абрикосовой. */
+  .promo-cta-invert {
+    @apply bg-white text-cobalt-700 shadow-[0_14px_36px_-14px_rgba(15,18,34,0.65)] hover:bg-cobalt-100;
+  }
+
+  .promo-note {
+    @apply mt-4 text-sm leading-relaxed text-white/90;
+  }
+
+  .promo-terms {
+    @apply mt-8 border-t border-white/15 pt-6 text-xs leading-relaxed text-white/90;
+  }
+
+  /* Базовое кольцо фокуса кобальтовое — на синем градиенте это 1.4:1 и его
+     попросту не видно. Белое даёт 6.2:1 к самому светлому участку. */
+  .promo :focus-visible {
+    @apply ring-2 ring-white ring-offset-2 ring-offset-cobalt-700;
+  }
+
+  /* Строка «промокод сохранён» в форме заявки */
+  .promo-applied {
+    @apply mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-apricot/40
+           bg-apricot/10 px-4 py-3 text-sm leading-relaxed text-white;
+  }
+
   /* ---------- Шаги обучения ---------- */
   .step-num {
     @apply font-mono text-sm font-medium tracking-widest text-cobalt;

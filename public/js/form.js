@@ -109,6 +109,65 @@
     });
   }
 
+  // ----------------------------------------------------------- промокод
+
+  const promo = window.ProKodPromo || null;
+  const promoBox = document.getElementById('promoApplied');
+  const promoBoxCode = document.getElementById('promoAppliedCode');
+  const promoRemove = document.getElementById('promoRemove');
+
+  function activePromo() {
+    return promo ? promo.read() : null;
+  }
+
+  /**
+   * Хвост, которым промокод уезжает менеджеру. Отдельного поля под него
+   * в /api/applications нет, и заводить его ради одной акции не стоит,
+   * поэтому код дописывается в конец комментария.
+   */
+  function promoSuffix() {
+    const active = activePromo();
+    return active ? `Промокод: ${active.code} (скидка ${active.percent}% на первый месяц)` : '';
+  }
+
+  /**
+   * Сколько символов остаётся родителю под собственный текст.
+   * Пока промокод активен, часть лимита занята хвостом с кодом — и предупредить
+   * об этом надо ДО отправки. Иначе длинный комментарий приводил бы к выбору из
+   * двух плохих исходов: либо сервер отвечает 400 на длину, которую родитель не
+   * превышал, либо код тихо не дописывается, а форма продолжает обещать скидку.
+   */
+  function commentLimit() {
+    const suffix = promoSuffix();
+    // 2 — длина разделителя '\n\n' между комментарием и хвостом
+    return suffix ? MAX_COMMENT - suffix.length - 2 : MAX_COMMENT;
+  }
+
+  /** Вызывается только после validate(), поэтому в лимит гарантированно укладывается. */
+  function withPromo(comment) {
+    const suffix = promoSuffix();
+    if (!suffix) return comment;
+
+    return comment ? `${comment}\n\n${suffix}` : suffix;
+  }
+
+  function paintPromo() {
+    const active = activePromo();
+    if (promoBoxCode && active) promoBoxCode.textContent = active.code;
+    if (promoBox) promoBox.hidden = active === null;
+  }
+
+  if (promoRemove && promo) {
+    promoRemove.addEventListener('click', () => {
+      promo.clear();
+      // Освободившийся лимит снимает ошибку «текст не поместится вместе с промокодом».
+      clearFieldError('comment');
+    });
+  }
+
+  if (promo) promo.onChange(paintPromo);
+  paintPromo();
+
   // ---------------------------------------------------------- валидация
 
   function fieldNode(name) {
@@ -177,8 +236,12 @@
     else if (course.length > MAX_COURSE) errors.course = 'Слишком длинное название направления.';
 
     const comment = String(values.comment || '').trim();
-    if (comment.length > MAX_COMMENT) {
-      errors.comment = `Комментарий слишком длинный — не больше ${MAX_COMMENT} символов.`;
+    const limit = commentLimit();
+    if (comment.length > limit) {
+      errors.comment =
+        limit === MAX_COMMENT
+          ? `Комментарий слишком длинный — не больше ${MAX_COMMENT} символов.`
+          : `Вместе с промокодом в комментарий помещается не больше ${limit} символов. Сократите текст или уберите промокод.`;
     }
 
     if (values.consent !== true) errors.consent = 'Нужно согласие на обработку персональных данных.';
@@ -273,7 +336,7 @@
       childName: String(values.childName).trim(),
       childAge: Number.parseInt(values.childAge, 10),
       course: String(values.course).trim(),
-      comment: String(values.comment || '').trim(),
+      comment: withPromo(String(values.comment || '').trim()),
       consent: true,
       website: String(values.website || ''),
     };

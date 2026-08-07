@@ -139,7 +139,7 @@
         </div>
 
         <p class="animate-fade-up mt-4 text-sm text-cobalt-100/50" style="animation-delay:.3s">
-          Урок бесплатный и ни к чему не обязывает — не понравится, просто не продолжаете.
+          Урок бесплатный и ни к чему не обязывает. Дальше — от 4 990 ₽ в месяц, оплата помесячно.
         </p>
 
         <dl class="animate-fade-up mt-12 grid grid-cols-2 gap-y-7 border-t border-white/10 pt-8 sm:grid-cols-4 sm:gap-x-4" style="animation-delay:.38s">
@@ -250,6 +250,53 @@
     </div>
   </section>
 
+  <!-- ============================================================ СКИДКА 15 %
+       Блок повторяется на странице четыре раза (здесь, в «Направлениях»,
+       в форме заявки и в подвале). Разметка у всех одинаковая по контракту:
+       контейнер [data-promo] + кнопка [data-promo-cta] с подписями для двух
+       состояний. Всё поведение — в js/landing.js, сам промокод — в js/promo.js. -->
+  <section class="bg-paper pt-16 sm:pt-20 lg:pt-24" aria-labelledby="promo-title">
+    <div class="shell">
+      <div class="promo promo-lg bg-grain" data-promo>
+        <span class="promo-glow" aria-hidden="true"></span>
+
+        <div class="relative grid gap-9 lg:grid-cols-[1.4fr_1fr] lg:items-center lg:gap-14">
+          <div>
+            <p class="promo-eyebrow">Скидка на первый месяц</p>
+            <h2 id="promo-title" class="promo-title">Напишите сейчас и получите скидку 15%</h2>
+            <p class="promo-lead">
+              Оставляете заявку на бесплатный вводный урок — ребёнок пробует направление без оплаты.
+              Если решите продолжить, промокод даёт скидку 15% на первый оплаченный месяц обучения.
+            </p>
+            <ul class="promo-points">
+              <li class="promo-point">Вводный урок — бесплатно</li>
+              <li class="promo-point">Решение — без обязательств</li>
+              <li class="promo-point">Скидка — на первый месяц</li>
+            </ul>
+          </div>
+
+          <div class="promo-panel">
+            <p class="promo-percent">−15<span class="text-4xl sm:text-5xl">%</span></p>
+            <span class="promo-code-label">Промокод на скидку</span>
+            <p><span class="promo-code">PROKOD15</span></p>
+            <button type="button" class="promo-cta mt-6 w-full" data-promo-cta
+                    data-label-idle="Записаться и получить скидку"
+                    data-label-saved="Перейти к заявке">
+              Записаться и получить скидку
+            </button>
+            <p class="promo-note" data-promo-idle>Урок бесплатный, промокод понадобится только при оплате.</p>
+            <p class="promo-note" data-promo-saved hidden>Промокод сохранён — покажите его при оплате.</p>
+          </div>
+        </div>
+
+        <p class="promo-terms">
+          Скидка 15% действует на первый оплаченный месяц обучения по одному направлению
+          и не суммируется с другими предложениями и акциями школы.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <!-- ============================================================ ДЛЯ КОГО -->
   <section class="section bg-paper" aria-labelledby="audience-title">
     <div class="shell">
@@ -313,7 +360,7 @@
         <h2 id="directions-title" class="section-title">Направления обучения</h2>
         <p class="section-lead">
           10 программ для двух возрастных групп: ребёнок выбирает то, что интересно ему, а не то, что выбрали за него.
-          Возраст указан на каждой карточке.
+          Возраст и стоимость — от 4 990 ₽ в месяц — указаны на каждой карточке.
         </p>
       </div>
 
@@ -328,7 +375,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Своя игра в Roblox с нуля</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок создаёт игровые миры и механики в Roblox Studio — от ландшафта до логики поведения персонажей. Мы объясняем не только кнопки редактора, но и язык Lua, на котором держится вся логика игры.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт свою игру в Roblox и опубликует её, чтобы в неё могли поиграть друзья.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">5 490 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">Roblox Studio</span><span class="chip">основы Lua</span><span class="chip">гейм-дизайн</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Roblox Studio">
             Записаться на направление
@@ -343,7 +395,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Первый сайт своими руками</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится собирать веб-страницы: от структуры и текста до цвета и изображений. К концу курса он понимает, как устроен любой сайт в интернете, и может изменить его сам.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> сверстает и опубликует личный сайт-визитку или сайт для школьного проекта.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">4 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">HTML</span><span class="chip">CSS</span><span class="chip">вёрстка страниц</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Создание сайтов">
             Записаться на направление
@@ -358,7 +415,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Первый код на Python</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок знакомится с программированием на одном из самых распространённых языков — простом для старта и мощном на практике. Мы разбираем переменные, циклы и условия на понятных примерах: играх, генераторах, мини-калькуляторах.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> напишет текстовую игру или калькулятор на Python и покажет, как он работает.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">5 490 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">переменные и типы данных</span><span class="chip">циклы и условия</span><span class="chip">редактор кода</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Python Junior">
             Записаться на направление
@@ -373,7 +435,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Уверенность в интернете и технике</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится безопасно и осмысленно пользоваться компьютером и интернетом: искать и проверять информацию, работать в облачных сервисах, распознавать мошеннические сайты. Это база, без которой сложно двигаться дальше в любое направление IT.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> настроит личный аккаунт и облачное хранилище, подготовит доклад о безопасности в сети.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">2 месяца · 16 занятий</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">4 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">2 месяца · 16 занятий</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">поиск и проверка информации</span><span class="chip">облачные сервисы</span><span class="chip">цифровая безопасность</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Цифровая грамотность">
             Записаться на направление
@@ -391,7 +458,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">От основ до рабочей программы</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок изучает Python глубже школьной программы: структуры данных, функции, работа с файлами и библиотеками. К концу курса он пишет программы, которые решают конкретную задачу, а не просто выводят текст на экран.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> разработает консольное приложение или бота и запустит его на своём компьютере.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">6 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">функции и структуры данных</span><span class="chip">библиотеки</span><span class="chip">отладка кода</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Python Developer">
             Записаться на направление
@@ -406,7 +478,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Живые сайты с интерактивом</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок проходит путь от статичной вёрстки до интерактивных страниц: кнопок, форм и анимаций на JavaScript. Финальный проект — сайт, который реагирует на действия пользователя, а не просто показывает текст.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> создаст многостраничный сайт с интерактивными элементами и разместит его в интернете.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">5 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">6 месяцев · 48 занятий</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">HTML и CSS</span><span class="chip">основы JavaScript</span><span class="chip">публикация сайта</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Веб-разработка (HTML, CSS, JavaScript)">
             Записаться на направление
@@ -421,7 +498,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">3D-игра на профессиональном движке</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок разрабатывает игру в Unity — том же движке, на котором делают коммерческие игры. Мы разбираем C#, физику объектов, управление персонажем и логику уровней.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт играбельный уровень с управлением персонажем и опубликует демоверсию игры.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">7 месяцев · 56 занятий</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">7 490 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">7 месяцев · 56 занятий</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">C#</span><span class="chip">работа в Unity</span><span class="chip">логика уровней</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Unity Game Developer">
             Записаться на направление
@@ -436,7 +518,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Нейросети как рабочий инструмент</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится грамотно работать с нейросетями: формулировать запросы, проверять результат и использовать ИИ для учёбы и своих проектов. Мы объясняем, как устроены языковые и графические модели — без запугивания и без иллюзий, что ИИ сделает всё за него.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> соберёт проект с использованием нейросетей — от текста и изображений до простого чат-бота.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">6 490 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">3 месяца · 24 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">промпт-инжиниринг</span><span class="chip">работа с нейросетями</span><span class="chip">проверка результата</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Основы ИИ (ChatGPT, Midjourney, нейросети)">
             Записаться на направление
@@ -451,7 +538,12 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Свой проект от идеи до презентации</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок разбирает, как устроен бизнес: от идеи и целевой аудитории до бюджета и презентации проекта инвестору. Мы используем реальные кейсы и разбираем чужие ошибки, чтобы не повторять их на практике.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> подготовит бизнес-план своего проекта и презентует его на защите перед группой.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">5 990 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">планирование бюджета</span><span class="chip">презентация идеи</span><span class="chip">анализ рынка</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="Предпринимательство">
             Записаться на направление
@@ -466,13 +558,40 @@
           <p class="mt-1.5 text-sm font-semibold text-cobalt">Дизайн интерфейсов, понятный пользователю</p>
           <p class="mt-3 text-sm leading-relaxed text-muted">Ребёнок учится проектировать интерфейсы приложений и сайтов: строить логику экранов, выбирать шрифты и цвета, проверять удобство на реальных людях. Работает в Figma — том же редакторе, что и дизайнеры в IT-компаниях.</p>
           <p class="course-outcome"><span class="font-semibold">Что сделает ребёнок:</span> спроектирует интерфейс мобильного приложения и соберёт кликабельный прототип в Figma.</p>
-          <p class="mt-5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
+          <p class="mt-5 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
+            <span class="course-price">6 490 ₽</span>
+            <span class="text-sm text-muted">/ месяц</span>
+          </p>
+          <p class="mt-1.5 font-mono text-2xs uppercase tracking-wider text-muted">4 месяца · 32 занятия</p>
           <div class="mt-3 flex flex-wrap gap-1.5"><span class="chip">работа в Figma</span><span class="chip">прототипирование</span><span class="chip">основы UX-исследований</span></div>
           <button type="button" class="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-sm font-semibold text-cobalt transition after:absolute after:inset-0 hover:gap-2.5" data-course="UI/UX-дизайн">
             Записаться на направление
             <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </article>
+      </div>
+
+      <!-- Скидка 15 % — компактная версия в конце «Направлений» -->
+      <div class="promo promo-sm bg-grain mt-10" data-promo>
+        <span class="promo-glow" aria-hidden="true"></span>
+        <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+          <div class="min-w-0">
+            <p class="promo-title-sm">Оставьте заявку сейчас — скидка 15% на первый месяц</p>
+            <p class="promo-note mt-3" data-promo-idle>
+              Промокод <span class="promo-code-inline">PROKOD15</span> действует на любое направление.
+              Вводный урок остаётся бесплатным.
+            </p>
+            <p class="promo-note mt-3" data-promo-saved hidden>
+              Промокод <span class="promo-code-inline">PROKOD15</span> сохранён — покажите его при оплате.
+            </p>
+          </div>
+          <button type="button" class="promo-cta promo-cta-invert w-full shrink-0 sm:w-auto" data-promo-cta
+                  data-label-idle="Получить скидку"
+                  data-label-saved="Перейти к заявке">
+            Получить скидку
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -484,8 +603,8 @@
         <p class="eyebrow">Тарифы</p>
         <h2 id="prices-title" class="section-title">Понятные цены без сюрпризов</h2>
         <p class="section-lead">
-          Платите помесячно, без длинных контрактов. Тариф можно выбрать после бесплатного вводного урока —
-          торопиться не нужно.
+          У каждого направления своя стоимость — от 4 990 ₽ в месяц. Платите помесячно, без длинных
+          контрактов, а тариф выбираете после бесплатного вводного урока.
         </p>
       </div>
 
@@ -494,7 +613,8 @@
         <!-- Старт -->
         <article class="reveal card flex flex-col p-8">
           <h3 class="font-display text-xl">Старт</h3>
-          <p class="mt-6 flex items-baseline gap-2">
+          <p class="mt-6 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
             <span class="price-value">4 990 ₽</span>
             <span class="text-sm text-muted">/ месяц</span>
           </p>
@@ -517,7 +637,8 @@
             <h3 class="font-display text-xl">Стандарт</h3>
             <span class="badge bg-apricot text-ink">Оптимальный темп</span>
           </div>
-          <p class="mt-6 flex items-baseline gap-2">
+          <p class="mt-6 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-cobalt-100/60">от</span>
             <span class="price-value text-white">8 990 ₽</span>
             <span class="text-sm text-cobalt-100/60">/ месяц</span>
           </p>
@@ -538,7 +659,8 @@
         <!-- Интенсив -->
         <article class="reveal card flex flex-col p-8">
           <h3 class="font-display text-xl">Интенсив</h3>
-          <p class="mt-6 flex items-baseline gap-2">
+          <p class="mt-6 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-sm text-muted">от</span>
             <span class="price-value">12 990 ₽</span>
             <span class="text-sm text-muted">/ месяц</span>
           </p>
@@ -556,6 +678,13 @@
           <button type="button" class="btn btn-outline mt-7 w-full" data-scroll-to="#signup">Выбрать «Интенсив»</button>
         </article>
       </div>
+
+      <p class="reveal mt-10 max-w-3xl text-sm leading-relaxed text-muted">
+        «От» — потому что стоимость зависит от направления: точная цена указана на карточке каждого
+        направления, и начинается она с 4 990 ₽ в месяц. По промокоду
+        <span class="chip font-mono">PROKOD15</span> первый оплаченный месяц обойдётся на 15% дешевле
+        выбранного тарифа.
+      </p>
 
       <ul class="reveal mt-12 grid gap-6 border-t border-ink/10 pt-10 sm:grid-cols-3">
         <li class="flex gap-3 text-sm leading-relaxed text-muted">
@@ -600,7 +729,7 @@
         <article class="reveal card-ink lg:col-span-2">
           <svg viewBox="0 0 24 24" class="h-8 w-8 text-apricot" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.8 1.8 0 0 1 0 3.6h-3a1.8 1.8 0 0 0 0 3.6h4"/></svg>
           <h3 class="mt-5 font-display text-lg text-white">Прозрачная стоимость</h3>
-          <p class="mt-3 leading-relaxed text-cobalt-100/70">Цена зависит только от количества занятий в месяц — без доплат за «материалы» или «продвинутый уровень». Что входит в тариф, вы видите до оплаты, а не узнаёте по ходу обучения.</p>
+          <p class="mt-3 leading-relaxed text-cobalt-100/70">Цена зависит только от направления и количества занятий в месяц — без доплат за «материалы» или «продвинутый уровень». Стоимость каждого направления указана на его карточке, а что входит в тариф, вы видите до оплаты, а не узнаёте по ходу обучения.</p>
         </article>
 
         <article class="reveal card-ink lg:col-span-2">
@@ -880,7 +1009,32 @@
   <section id="signup" class="on-ink section relative scroll-mt-20 overflow-hidden bg-ink bg-grain" aria-labelledby="signup-title">
     <div class="absolute inset-0 bg-halo" aria-hidden="true"></div>
 
-    <div class="shell relative grid gap-12 lg:grid-cols-12 lg:gap-16">
+    <div class="shell relative">
+
+      <!-- Скидка 15 % — компактная версия прямо над формой -->
+      <div class="promo promo-sm bg-grain" data-promo>
+        <span class="promo-glow" aria-hidden="true"></span>
+        <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+          <div class="min-w-0">
+            <p class="promo-title-sm">Оставьте заявку сейчас — скидка 15% на первый месяц</p>
+            <p class="promo-note mt-3" data-promo-idle>
+              Промокод <span class="promo-code-inline">PROKOD15</span> подставится в заявку автоматически.
+            </p>
+            <p class="promo-note mt-3" data-promo-saved hidden>
+              Промокод <span class="promo-code-inline">PROKOD15</span> уже в заявке — осталось заполнить форму.
+            </p>
+          </div>
+          <button type="button" class="promo-cta promo-cta-invert w-full shrink-0 sm:w-auto" data-promo-cta
+                  data-label-idle="Получить скидку"
+                  data-label-saved="Перейти к заявке">
+            Получить скидку
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="shell relative mt-12 grid gap-12 lg:grid-cols-12 lg:gap-16">
 
       <div class="lg:col-span-5">
         <p class="eyebrow">Бесплатный вводный урок</p>
@@ -990,6 +1144,17 @@
               </div>
             </div>
 
+            <!-- Появляется, когда человек нажал кнопку в блоке со скидкой.
+                 Показываем явно: код уйдёт в заявку, и его видно до отправки. -->
+            <div class="promo-applied" id="promoApplied" hidden>
+              <span class="promo-code-inline" id="promoAppliedCode">PROKOD15</span>
+              <span class="min-w-0 flex-1">Скидка 15% на первый месяц — передадим менеджеру вместе с заявкой.</span>
+              <button type="button" id="promoRemove"
+                      class="font-semibold text-white underline decoration-apricot decoration-2 underline-offset-4 transition hover:text-apricot-400">
+                Убрать
+              </button>
+            </div>
+
             <div class="mt-6">
               <label class="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-cobalt-100/70" for="consent">
                 <input class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded border-white/25 bg-white/10 text-cobalt accent-apricot" type="checkbox" id="consent" name="consent" aria-describedby="consent-error">
@@ -1028,6 +1193,24 @@
 <!-- ============================================================ ФУТЕР -->
 <footer id="contacts" class="on-ink scroll-mt-20 bg-ink-900 pb-10 pt-16 text-cobalt-100/70 sm:pt-20">
   <div class="shell">
+
+    <!-- Скидка 15 % — самая компактная версия, в подвале -->
+    <div class="promo promo-sm bg-grain mb-14" data-promo>
+      <span class="promo-glow" aria-hidden="true"></span>
+      <div class="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+        <div class="min-w-0">
+          <p class="promo-title-sm">
+            Запишитесь на бесплатный урок сейчас — промокод даст скидку 15% на первый месяц
+          </p>
+        </div>
+        <button type="button" class="promo-cta promo-cta-invert w-full shrink-0 sm:w-auto" data-promo-cta
+                data-label-idle="Записаться со скидкой"
+                data-label-saved="Перейти к заявке">
+          Записаться со скидкой
+        </button>
+      </div>
+    </div>
+
     <div class="grid gap-10 lg:grid-cols-12 lg:gap-8">
 
       <div class="lg:col-span-5">
@@ -1095,6 +1278,10 @@
 }
 </script>
 
+<!-- promo.js только определяет window.ProKodPromo и должен выполниться первым:
+     landing.js и form.js рассчитывают на готовый объект. Все три с defer,
+     а значит выполнятся строго в порядке подключения. -->
+<script src="/js/promo.js" defer></script>
 <script src="/js/landing.js" defer></script>
 <script src="/js/form.js" defer></script>
 </body>

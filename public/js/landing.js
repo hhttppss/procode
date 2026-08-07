@@ -384,6 +384,16 @@
     target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   }
 
+  /** Переход к форме заявки: прокрутка плюс фокус в первое поле. */
+  function goToSignup() {
+    scrollToTarget('#signup');
+
+    const parentName = document.getElementById('parentName');
+    if (!parentName) return;
+    // Фокус после прокрутки, иначе браузер прервёт плавный переход.
+    setTimeout(() => parentName.focus({ preventScroll: true }), reduceMotion ? 0 : 700);
+  }
+
   function initCourseLinks() {
     const courseSelect = document.getElementById('course');
 
@@ -396,18 +406,57 @@
           courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
-        scrollToTarget('#signup');
-
-        const parentName = document.getElementById('parentName');
-        if (!parentName) return;
-        // Фокус после прокрутки, иначе браузер прервёт плавный переход.
-        setTimeout(() => parentName.focus({ preventScroll: true }), reduceMotion ? 0 : 700);
+        goToSignup();
       });
     });
 
     document.querySelectorAll('[data-scroll-to]').forEach((button) => {
       button.addEventListener('click', () => scrollToTarget(button.dataset.scrollTo));
     });
+  }
+
+  // ------------------------------------------------- блоки со скидкой 15 %
+
+  /**
+   * Четыре блока [data-promo] ведут себя как один: нажатие в любом сохраняет
+   * промокод, и все сразу переходят в состояние «сохранён». Иначе в подвале
+   * родителю предлагали бы забрать скидку, которую он уже забрал наверху.
+   *
+   * Тексты обоих состояний лежат в разметке (data-label-idle / data-label-saved
+   * и пары [data-promo-idle] / [data-promo-saved]) — здесь только переключение.
+   */
+  function initPromo() {
+    const promo = window.ProKodPromo;
+    const blocks = [...document.querySelectorAll('[data-promo]')];
+    if (!promo || blocks.length === 0) return;
+
+    const paint = () => {
+      const saved = promo.read() !== null;
+
+      for (const block of blocks) {
+        const cta = block.querySelector('[data-promo-cta]');
+        const label = cta && (saved ? cta.dataset.labelSaved : cta.dataset.labelIdle);
+        if (label) cta.textContent = label;
+
+        const idle = block.querySelector('[data-promo-idle]');
+        const done = block.querySelector('[data-promo-saved]');
+        if (idle) idle.hidden = saved;
+        if (done) done.hidden = !saved;
+      }
+    };
+
+    for (const block of blocks) {
+      const cta = block.querySelector('[data-promo-cta]');
+      if (!cta) continue;
+
+      cta.addEventListener('click', () => {
+        promo.save();
+        goToSignup();
+      });
+    }
+
+    promo.onChange(paint);
+    paint();
   }
 
   // --------------------------------------------------------------- FAQ
@@ -441,6 +490,7 @@
   initStudentScreen();
   initReveal();
   initCourseLinks();
+  initPromo();
   initFaq();
   initYear();
 })();
