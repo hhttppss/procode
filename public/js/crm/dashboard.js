@@ -76,24 +76,24 @@ function barList(rows, { valueFormat = String } = {}) {
   return h(
     'ul',
     { class: 'space-y-2.5' },
-    rows.map((row) =>
-      h('li', {}, [
+    rows.map((row) => {
+      // Ширину полосы задаём через CSSOM (bar.style.width), а не attrs.style: CSP
+      // (style-src без 'unsafe-inline') блокирует и style="..." в разметке, и
+      // setAttribute('style', ...) из JS — h() как раз делает это через setAttribute.
+      // Индивидуальное свойство CSSOM политика не трогает.
+      const bar = h('div', { class: 'h-full rounded-full bg-cobalt' });
+      bar.style.width = `${Math.round((row.value / max) * 100)}%`;
+
+      return h('li', {}, [
         h('div', { class: 'flex items-baseline justify-between gap-3' }, [
           // min-w-0 обязателен: без него truncate не срабатывает — элемент flex
           // не сжимается меньше своего текста, и длинное направление растягивает панель.
           h('span', { class: 'min-w-0 truncate text-sm', attrs: { title: row.label }, text: row.label }),
           h('span', { class: 'shrink-0 font-mono text-sm font-semibold tnum', text: valueFormat(row.value) }),
         ]),
-        h(
-          'div',
-          { class: 'mt-1 h-1.5 overflow-hidden rounded-full bg-mist' },
-          h('div', {
-            class: 'h-full rounded-full bg-cobalt',
-            attrs: { style: `width: ${Math.round((row.value / max) * 100)}%` },
-          })
-        ),
-      ])
-    )
+        h('div', { class: 'mt-1 h-1.5 overflow-hidden rounded-full bg-mist' }, bar),
+      ]);
+    })
   );
 }
 

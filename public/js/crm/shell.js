@@ -37,6 +37,49 @@ function applyRoleVisibility() {
 
 // ------------------------------------------------------------------- меню
 
+const FOCUSABLE = 'a[href], button:not([disabled]), select, textarea, input:not([type="hidden"]), [tabindex]';
+
+/**
+ * Прячет содержимое страницы от клавиатуры и скринридера, пока боковое меню открыто
+ * поверх него на узких экранах — тот же приём, что и в мобильном меню лендинга
+ * (public/js/landing.js, createIsolation). Набор изолируемых узлов свой: там прячут
+ * секции сайта позади выпадающего списка ссылок, здесь — шапку и рабочую область,
+ * которые лежат в DOM рядом с самим меню (aside#sidebar), а не под ним.
+ */
+function createIsolation(nodes) {
+  const supportsInert = 'inert' in HTMLElement.prototype;
+
+  // Старым браузерам inert неизвестен: гасим табуляцию вручную, запоминая прежний
+  // tabindex, чтобы вернуть его при закрытии, и прячем ветку из дерева доступности aria-hidden.
+  function fallback(node, isolated) {
+    if (isolated) {
+      node.setAttribute('aria-hidden', 'true');
+      for (const item of node.querySelectorAll(FOCUSABLE)) {
+        if (item.dataset.navTabindex === undefined) {
+          item.dataset.navTabindex = item.getAttribute('tabindex') ?? '';
+        }
+        item.setAttribute('tabindex', '-1');
+      }
+      return;
+    }
+
+    node.removeAttribute('aria-hidden');
+    for (const item of node.querySelectorAll('[data-nav-tabindex]')) {
+      const previous = item.dataset.navTabindex;
+      if (previous) item.setAttribute('tabindex', previous);
+      else item.removeAttribute('tabindex');
+      delete item.dataset.navTabindex;
+    }
+  }
+
+  return (isolated) => {
+    for (const node of nodes) {
+      if (supportsInert) node.inert = isolated;
+      else fallback(node, isolated);
+    }
+  };
+}
+
 function initNav() {
   const sidebar = byId('sidebar');
   const backdrop = byId('navBackdrop');
@@ -44,11 +87,21 @@ function initNav() {
   const closeButton = byId('navClose');
   if (!sidebar || !backdrop) return;
 
+  // Изолируем всё, что лежит вне бокового меню: на узких экранах оно выезжает поверх
+  // шапки и рабочей области, а не рядом с ними. Без inert Tab уводил бы фокус под
+  // панель, а скринридер продолжал бы озвучивать контент, скрытый за меню и подложкой.
+  // Сама подложка (#navBackdrop) не изолируется — по клику на неё меню и так закрывается.
+  const isolate = createIsolation([document.querySelector('header'), byId('appContent')].filter(Boolean));
+
   function open() {
     sidebar.classList.remove('-translate-x-full');
     backdrop.hidden = false;
     backdrop.classList.remove('hidden');
     document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+    isolate(true);
+    // Фокус — на кнопку закрытия: с inert на шапке и контенте единственная доступная
+    // по Tab область — само меню, и Tab начинает естественно кружить внутри него.
+    closeButton?.focus({ preventScroll: true });
   }
 
   function close() {
@@ -56,6 +109,10 @@ function initNav() {
     backdrop.hidden = true;
     backdrop.classList.add('hidden');
     document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+    isolate(false);
+    // Фокус возвращается на кнопку, открывшую меню: иначе он проваливается в body,
+    // и следующий Tab начинает обход страницы заново, а не продолжает с этого места.
+    openButton?.focus({ preventScroll: true });
   }
 
   openButton?.addEventListener('click', open);
@@ -65,6 +122,16 @@ function initNav() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !backdrop.hidden) close();
   });
+
+  // На широком экране меню всегда открыто правилом lg:translate-x-0, а изоляция шапки
+  // и контента — нет: если открыть меню на телефоне и повернуть его или растянуть окно
+  // до широкого экрана, шапка и контент остались бы недоступны насовсем.
+  const desktop = window.matchMedia('(min-width: 1024px)');
+  const onDesktop = (event) => {
+    if (event.matches && !backdrop.hidden) close();
+  };
+  if (typeof desktop.addEventListener === 'function') desktop.addEventListener('change', onDesktop);
+  else desktop.addListener(onDesktop);
 }
 
 // ------------------------------------------------------------------ выход

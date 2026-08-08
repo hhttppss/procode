@@ -123,9 +123,15 @@ function fill(template, values) {
  * @param {string} options.view       имя файла в views/pages без расширения
  * @param {string} options.script     имя модуля в public/js/crm
  * @param {object} options.data       дополнительные данные для window.PC
+ * @param {string} options.nonce      res.locals.cspNonce текущего запроса — без него
+ *                                    блок с данными сессии заблокирует CSP (см. server/csp.js)
  */
-async function renderApp({ user, module: moduleName, view, script, title, heading, subheading, data = {} }) {
+async function renderApp({ user, module: moduleName, view, script, title, heading, subheading, data = {}, nonce }) {
   const pageView = view || moduleName;
+
+  // Молчаливой замены нет намеренно: страница без nonce открылась бы пустой оболочкой
+  // (window.PC не выполнился, модули упали), и искать причину пришлось бы в консоли браузера.
+  if (!nonce) throw new Error('renderApp: не передан nonce — страницу платформы без него собирать нельзя.');
 
   const [layout, content] = await Promise.all([
     readTemplate(path.join(VIEWS_DIR, 'layout.html')),
@@ -149,7 +155,7 @@ async function renderApp({ user, module: moduleName, view, script, title, headin
     USER_ROLE: escapeHtml(catalog.labelOf(catalog.ROLES, user.role)),
     USER_INITIALS: escapeHtml(initials(user.name || user.login)),
     CONTENT: content,
-    BOOTSTRAP: `<script>window.PC = ${escapeJson(bootstrap)};</script>`,
+    BOOTSTRAP: `<script nonce="${escapeHtml(nonce)}">window.PC = ${escapeJson(bootstrap)};</script>`,
     SCRIPT: escapeHtml(script || `${pageView}.js`),
   });
 }

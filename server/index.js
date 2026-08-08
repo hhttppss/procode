@@ -13,6 +13,7 @@ const path = require('path');
 // что считает «сегодня» и «эту неделю», должно увидеть уже правильный пояс.
 const config = require('./config');
 const auth = require('./auth');
+const csp = require('./csp');
 const models = require('./models');
 
 const PUBLIC_DIR = path.join(config.rootDir, 'public');
@@ -25,38 +26,20 @@ app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
 
 /**
- * Политика безопасности контента.
+ * Заголовки безопасности. Сама политика собрана в server/csp.js — там же объяснено,
+ * почему в ней нет 'unsafe-inline' и как разрешены оба вида инлайновых блоков.
  *
- * 'unsafe-inline' в script-src нужен из-за инлайновых блоков на страницах:
- * микроразметки JSON-LD в index.html и данных сессии, которые сервер подставляет
- * в страницы платформы. Убрать его можно, только перейдя на nonce, а для этого
- * index.html придётся отдавать через шаблонизатор, а не как статический файл.
- * Даже в таком виде политика запрещает загрузку скриптов и стилей с чужих доменов,
- * подмену <base> и встраивание сайта в чужой фрейм.
- *
- * fonts.googleapis.com и fonts.gstatic.com из style-src/font-src убраны вместе
- * с переездом шрифтов на свой хостинг (public/fonts): разрешения стали мёртвыми,
- * а чужой домен в CSP — лишняя поверхность. Если шрифты снова поедут в Google,
- * их придётся вернуть, иначе браузер молча заблокирует загрузку.
+ * Nonce выдаётся на каждый запрос, включая запросы за картинками и шрифтами, где он
+ * никому не нужен. Это 16 случайных байт — дешевле, чем второй код-путь, в котором
+ * легко забыть выдать nonce новой странице платформы.
  */
-const CSP = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "img-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
-  "font-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self'",
-].join('; ');
-
 app.use((req, res, next) => {
+  res.locals.cspNonce = csp.createNonce();
+
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader('Content-Security-Policy', csp.policy(res.locals.cspNonce));
   next();
 });
 
@@ -96,7 +79,10 @@ app.use(
 );
 
 app.get('/', (req, res, next) => {
-  res.sendFile(INDEX_FILE, (error) => {
+  // sendFile идёт в обход setHeaders из express.static и без этого поставил бы
+  // «public, max-age=0». Лендинг — тот же index.html, что и в статике: ревалидация,
+  // а не кэш, иначе после деплоя браузер соберёт новую разметку со старым styles.css.
+  res.sendFile(INDEX_FILE, { headers: { 'Cache-Control': 'no-cache' } }, (error) => {
     if (!error) return;
     if (error.code === 'ENOENT') return res.status(200).type('html').send(landingPlaceholder());
     next(error);
@@ -111,6 +97,19 @@ app.use(auth.attachUser);
 app.use(auth.sameOrigin);
 
 app.use('/', require('./routes/auth'));
+
+/**
+ * Всё под /app — личное. В страницы инлайном уезжают имя, роль и права текущего
+ * сотрудника, а ответы /app/api состоят из данных школы целиком. no-store запрещает
+ * сохранять их и браузеру, и промежуточному прокси: иначе следующий человек за тем же
+ * компьютером увидит чужую страницу кнопкой «Назад», а общий кэш офиса — чужие данные.
+ * Один префикс покрывает и страницы, и API — заголовку незачем расползаться по обработчикам.
+ */
+app.use('/app', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, private');
+  next();
+});
+
 app.use('/app/api', require('./routes/api'));
 app.use('/app', require('./routes/pages'));
 

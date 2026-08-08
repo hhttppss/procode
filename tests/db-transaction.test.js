@@ -141,7 +141,15 @@ function assertScenarios(report, engine) {
   assert.equal(report.parallel.total, report.parallel.before + 20);
   assert.equal(report.parallel.uniqueIds, report.parallel.total, 'идентификаторы уникальны');
 
-  assert.deepEqual(report.final, { notes: 22, tags: 1 });
+  // --- (г) проверка и запись в одной транзакции: «последнего» отнять нельзя
+  assert.deepEqual(
+    report.lastActive.results,
+    [false, true],
+    'вторая транзакция обязана увидеть запись первой — иначе проверка «остался ли последний» бессмысленна'
+  );
+  assert.equal(report.lastActive.active, 1, 'после гонки должна остаться ровно одна активная запись');
+
+  assert.deepEqual(report.final, { notes: 24, tags: 1 });
 }
 
 test('движок json: транзакции и очередь на файловом хранилище', () => {
@@ -154,7 +162,7 @@ test('движок json: транзакции и очередь на файло�
   const notes = readJsonCollection(project.data, 'tst_notes');
   const tags = readJsonCollection(project.data, 'tst_tags');
 
-  assert.equal(notes.length, 22, 'на диске должно лежать ровно столько же, сколько отдал модуль');
+  assert.equal(notes.length, 24, 'на диске должно лежать ровно столько же, сколько отдал модуль');
   assert.equal(tags.length, 1);
   assert.equal(notes.filter((item) => item.title.startsWith('параллельная')).length, 20);
   assert.equal(notes.some((item) => item.title.includes('сорванной')), false, 'откат должен был не дойти до диска');
@@ -175,7 +183,7 @@ test('движок sqlite: транзакции и очередь на наст�
   const notes = readSqliteCollection(storage, 'tst_notes');
   const tags = readSqliteCollection(storage, 'tst_tags');
 
-  assert.equal(notes.length, 22);
+  assert.equal(notes.length, 24);
   assert.equal(tags.length, 1);
   assert.equal(notes.filter((item) => item.title.startsWith('параллельная')).length, 20);
   assert.equal(notes.some((item) => item.title.includes('сорванной')), false, 'BEGIN…COMMIT обязан был откатиться целиком');

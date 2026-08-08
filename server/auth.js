@@ -71,6 +71,23 @@ function createRateLimiter({ limit, windowMs, sweepMs = 60 * 1000 }) {
       return stamps.length;
     },
 
+    /**
+     * Через сколько секунд освободится место под следующее обращение.
+     * Нужно для заголовка Retry-After и для внятного текста ошибки: «подождите»
+     * без срока человек читает как «сломалось».
+     * @returns {number} 0 — ждать не нужно
+     */
+    retryAfter(key) {
+      const now = Date.now();
+      const stamps = fresh(hits.get(key) || [], now);
+      if (stamps.length < limit) return 0;
+
+      // Отметки идут по возрастанию: место освободится, когда из окна выпадет
+      // limit-я с конца — до неё в окне останется ровно limit-1 обращение.
+      const releasing = stamps[stamps.length - limit];
+      return Math.max(1, Math.ceil((releasing + windowMs - now) / 1000));
+    },
+
     reset(key) {
       hits.delete(key);
     },

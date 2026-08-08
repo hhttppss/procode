@@ -152,12 +152,47 @@ async function parallel() {
   };
 }
 
+/**
+ * (г) «Последний активный»: две параллельные транзакции проверяют, останется ли после них
+ * хоть одна активная запись, и гасят свою. Ровно так устроена защита последнего
+ * администратора (server/routes/api/teachers.js): проверка и запись обязаны попасть
+ * в одно место очереди, иначе оба запроса успевают пройти проверку до первой записи
+ * и школа остаётся без администратора. Здесь та же связка проверяется на самом движке,
+ * без моделей и роутеров — и одинаково на json, и на sqlite.
+ */
+async function lastActive() {
+  const [alpha, beta] = await db.transaction(['tst_notes'], (tx) => [
+    tx.tst_notes.insert({ title: 'активная 1', amount: 1 }),
+    tx.tst_notes.insert({ title: 'активная 2', amount: 1 }),
+  ]);
+
+  const isActive = (item) => item.title.startsWith('активная') && item.amount === 1;
+
+  const disable = (id) =>
+    db.transaction(['tst_notes'], (tx) => {
+      const others = tx.tst_notes.filter((item) => item.id !== id && isActive(item));
+      if (others.length === 0) return false; // последнюю гасить нельзя
+
+      tx.tst_notes.update(id, { amount: 0 });
+      return true;
+    });
+
+  // Обе транзакции ставятся в очередь в одном такте — это и есть гонка.
+  const results = await Promise.all([disable(alpha.id), disable(beta.id)]);
+
+  report.lastActive = {
+    results: results.slice().sort(),
+    active: (await notes.list()).filter(isActive).length,
+  };
+}
+
 async function main() {
   await seed();
   await rollback();
   await commit();
   await guard();
   await parallel();
+  await lastActive();
 
   report.final = {
     notes: await notes.count(),

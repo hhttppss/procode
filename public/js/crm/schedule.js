@@ -311,6 +311,10 @@ function renderMonthGrid() {
     if (day === today) classes.push('cal-day-today');
 
     return h('div', { class: classes.join(' '), attrs: { role: 'gridcell' } }, [
+      // Независимый от цвета признак «сегодня» (WCAG 1.4.1) — см. комментарий у
+      // .cal-day-today-tag в input.css. aria-hidden: скринридеру дату уже называет
+      // aria-current="date" на кнопке ниже, повторять текстом не нужно.
+      day === today ? h('span', { class: 'cal-day-today-tag', text: 'Сегодня', attrs: { 'aria-hidden': 'true' } }) : null,
       h(
         'button',
         {
@@ -904,30 +908,62 @@ function openRescheduleForm(lesson, parentModal) {
   });
 }
 
+/**
+ * Занятие из серии можно удалить целиком или только один экземпляр — раньше это было
+ * устроено через confirmModal(), где «Отмена» первого вопроса означала «нет, удали всю
+ * серию» и вёл ко второму вопросу. confirmModal() возвращает false одинаково для кнопки
+ * «Отмена», крестика, Esc и клика по подложке — то есть человек, отменивший удаление
+ * через Esc, получал предложение снести всю серию. Отменяющее действие обязано ничего
+ * не делать, поэтому здесь три равноправные кнопки одного окна, а не да/нет с подтекстом.
+ *
+ * @returns {Promise<'single'|'series'|null>} null — ничего не делать (Esc, крестик, подложка, «Отмена»)
+ */
+function chooseLessonDeletion() {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (value) => {
+      settled = true;
+      resolve(value);
+      modal.close();
+    };
+
+    // Порядок слева направо — от самого безопасного к самому разрушительному: «Отмена»
+    // первой и без акцента, удаление серии — последней и кнопкой kind: 'danger', она
+    // необратима сильнее, чем удаление одного занятия, и должна читаться иначе визуально.
+    const cancelButton = modalButton('Отмена', { onClick: () => finish(null) });
+    const singleButton = modalButton('Удалить только это занятие', { onClick: () => finish('single') });
+    const seriesButton = modalButton('Удалить всю серию', { kind: 'danger', onClick: () => finish('series') });
+
+    const modal = openModal({
+      title: 'Удаление занятия из серии',
+      body: h('p', {
+        class: 'text-sm leading-relaxed text-ink/80',
+        text: 'Это занятие входит в серию повторяющихся. Можно удалить только его или всю серию, начиная с этой даты, — оба варианта необратимы.',
+      }),
+      actions: [cancelButton, singleButton, seriesButton],
+      onClose: () => {
+        if (!settled) resolve(null);
+      },
+    });
+  });
+}
+
 async function removeLesson(lesson, modal) {
   const inSeries = Boolean(lesson.seriesId);
-  const question = inSeries
-    ? 'Удалить это занятие? Нажмите «Отмена», если хотите удалить всю серию — для этого будет отдельный вопрос.'
-    : 'Удалить занятие? Восстановить его будет нельзя.';
 
-  if (!(await confirmModal(question, { title: 'Удаление занятия' }))) {
-    if (!inSeries) return;
-    if (!(await confirmModal('Удалить всю серию, начиная с этой даты?', { title: 'Удаление серии занятий', confirmLabel: 'Удалить серию' }))) return;
-
-    try {
-      const data = await api(`/lessons/${encodeURIComponent(lesson.id)}?series=1`, { method: 'DELETE' });
-      toast(`Удалено занятий: ${data.removed}`);
-      modal.close();
-      await load();
-    } catch (error) {
-      toast(error.message, 'error');
-    }
+  let scope = 'single';
+  if (inSeries) {
+    scope = await chooseLessonDeletion();
+    if (!scope) return; // «Отмена», Esc, крестик или клик по подложке — ничего не делаем
+  } else if (!(await confirmModal('Удалить занятие? Восстановить его будет нельзя.', { title: 'Удаление занятия' }))) {
     return;
   }
 
   try {
-    await api(`/lessons/${encodeURIComponent(lesson.id)}`, { method: 'DELETE' });
-    toast('Занятие удалено');
+    const query = scope === 'series' ? '?series=1' : '';
+    const data = await api(`/lessons/${encodeURIComponent(lesson.id)}${query}`, { method: 'DELETE' });
+    toast(scope === 'series' ? `Удалено занятий: ${data.removed}` : 'Занятие удалено');
     modal.close();
     await load();
   } catch (error) {

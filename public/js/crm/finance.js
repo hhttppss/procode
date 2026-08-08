@@ -86,9 +86,19 @@ function renderChart() {
   svg.setAttribute('viewBox', `0 0 ${width} ${height + 28}`);
   svg.setAttribute('class', 'h-56 w-full');
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Доходы и расходы по периодам');
+  // aria-label не даёт скринридеру ни одной цифры из графика, а с клавиатуры до данных
+  // внутри <rect> не добраться вовсе. aria-describedby ссылается на обычную таблицу
+  // с теми же значениями (см. chartDataTable ниже) — она и есть настоящая текстовая
+  // альтернатива; <title> внутри SVG остаётся кратким именем графика.
+  svg.setAttribute('aria-labelledby', 'chartTitle');
+  svg.setAttribute('aria-describedby', 'chartTable');
 
   const ns = 'http://www.w3.org/2000/svg';
+
+  const svgTitle = document.createElementNS(ns, 'title');
+  svgTitle.setAttribute('id', 'chartTitle');
+  svgTitle.textContent = 'Доходы и расходы по периодам';
+  svg.append(svgTitle);
 
   // Горизонтальные направляющие
   for (let index = 0; index <= 4; index += 1) {
@@ -142,13 +152,41 @@ function renderChart() {
     }
   });
 
-  root.replaceChildren(svg);
+  root.replaceChildren(svg, chartDataTable(points));
 }
 
 /** Ключ точки — «2026-08» для месяцев и «2026-08-01» для дней. */
 function labelOfPoint(key) {
   if (summary.series.byMonth) return `${key.slice(5, 7)}.${key.slice(2, 4)}`;
   return `${key.slice(8)}.${key.slice(5, 7)}`;
+}
+
+/**
+ * Текстовая альтернатива к SVG-диаграмме выше — те же значения обычной html-таблицей.
+ * Скрыта через sr-only (позиционированием), а не через hidden/display:none: скрытый
+ * через display элемент скринридер тоже пропускает, а здесь как раз наоборот — данные
+ * нужны только ему и клавиатурной навигации, зрячим пользователям видно сам график.
+ */
+function chartDataTable(points) {
+  return h('table', { class: 'sr-only', attrs: { id: 'chartTable' } }, [
+    h('caption', { text: 'Доходы и расходы по периодам — значения графика' }),
+    h('thead', {}, h('tr', {}, [
+      h('th', { attrs: { scope: 'col' }, text: 'Период' }),
+      h('th', { attrs: { scope: 'col' }, text: 'Доход' }),
+      h('th', { attrs: { scope: 'col' }, text: 'Расход' }),
+    ])),
+    h(
+      'tbody',
+      {},
+      points.map((point) =>
+        h('tr', {}, [
+          h('th', { attrs: { scope: 'row' }, text: labelOfPoint(point.key) }),
+          h('td', { text: formatMoney(point.income) }),
+          h('td', { text: formatMoney(point.expense) }),
+        ])
+      )
+    ),
+  ]);
 }
 
 // ------------------------------------------------------------- начисления

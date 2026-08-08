@@ -39,6 +39,9 @@ function page({ module: moduleName, view, script, title, heading, subheading, da
         heading: typeof heading === 'function' ? heading(req) : heading,
         subheading,
         data: extra,
+        // Nonce выдан общим middleware безопасности (server/index.js) на этот запрос
+        // и уже стоит в заголовке CSP — без него инлайновый блок с данными сессии не выполнится.
+        nonce: res.locals.cspNonce,
       })
     );
   });

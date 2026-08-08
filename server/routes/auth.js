@@ -29,7 +29,10 @@ function safeNext(value) {
 
 router.get('/login', (req, res) => {
   if (req.user) return res.redirect(safeNext(req.query.next));
-  return res.sendFile(LOGIN_VIEW);
+  // Тот же no-cache, что и у остальной статики: sendFile идёт мимо express.static
+  // и по умолчанию поставил бы «public, max-age=0». Личного здесь ничего нет —
+  // страница входа одинакова для всех, поэтому no-store не нужен.
+  return res.sendFile(LOGIN_VIEW, { headers: { 'Cache-Control': 'no-cache' } });
 });
 
 router.post(
