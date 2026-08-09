@@ -12,6 +12,7 @@
 const express = require('express');
 const path = require('path');
 
+const assets = require('../assets');
 const auth = require('../auth');
 const db = require('../db');
 const users = require('../models/users');
@@ -29,10 +30,16 @@ function safeNext(value) {
 
 router.get('/login', (req, res) => {
   if (req.user) return res.redirect(safeNext(req.query.next));
-  // Тот же no-cache, что и у остальной статики: sendFile идёт мимо express.static
-  // и по умолчанию поставил бы «public, max-age=0». Личного здесь ничего нет —
-  // страница входа одинакова для всех, поэтому no-store не нужен.
-  return res.sendFile(LOGIN_VIEW, { headers: { 'Cache-Control': 'no-cache' } });
+
+  // Страница читается с диска и размечается метками версий один раз (server/assets.js),
+  // sendFile здесь не подошёл бы: он отдал бы файл как есть, без меток.
+  // Тот же no-cache, что и у остальной разметки, — из HTML браузер узнаёт актуальные метки.
+  // Личного здесь ничего нет: страница входа одинакова для всех, поэтому no-store не нужен.
+  const html = assets.template(LOGIN_VIEW);
+  if (html === null) throw new Error(`Не найден шаблон страницы входа: ${LOGIN_VIEW}`);
+
+  res.setHeader('Cache-Control', 'no-cache');
+  return res.type('html').send(html);
 });
 
 router.post(

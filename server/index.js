@@ -12,12 +12,13 @@ const path = require('path');
 // config подключается первым намеренно: он выставляет process.env.TZ, а всё,
 // что считает «сегодня» и «эту неделю», должно увидеть уже правильный пояс.
 const config = require('./config');
+const assets = require('./assets');
 const auth = require('./auth');
 const csp = require('./csp');
 const models = require('./models');
 
 const PUBLIC_DIR = path.join(config.rootDir, 'public');
-const INDEX_FILE = path.join(PUBLIC_DIR, 'index.html');
+const LANDING_URL = '/index.html';
 
 const app = express();
 
@@ -45,7 +46,7 @@ app.use((req, res, next) => {
 
 /**
  * Сжатие ответов. Стоит до статики и до маршрутов: самое тяжёлое здесь — styles.css
- * и HTML лендинга, а их отдаёт express.static.
+ * и HTML лендинга, а они отдаются ниже.
  * За nginx этот слой лучше выключить и сжимать на прокси — см. README.
  */
 app.use(compression());
@@ -53,41 +54,54 @@ app.use(compression());
 app.use(express.json({ limit: '64kb' }));
 
 /**
+ * Статические страницы (public/*.html) отдаются не как есть, а с проставленными метками
+ * версий у ссылок на CSS и JS — см. server/assets.js. Разметка размечена и разложена
+ * по памяти при старте, здесь остаётся только отдать строку.
+ *
+ * Обработчик стоит перед express.static, иначе тот отдал бы index.html и oferta.html
+ * в исходном виде, без меток. HTML по-прежнему `no-cache`: он и есть тот документ,
+ * из которого браузер узнаёт актуальные метки, кэшировать его нельзя.
+ * ETag и ответ 304 берёт на себя res.send.
+ */
+function sendPage(res, urlPath) {
+  const html = assets.page(urlPath);
+  if (html === null) return false;
+
+  res.setHeader('Cache-Control', 'no-cache');
+  res.type('html').send(html);
+  return true;
+}
+
+app.get(['/', LANDING_URL], (req, res) => {
+  if (sendPage(res, LANDING_URL)) return;
+  // Лендинга нет на диске — платформа работает и без него, показываем заглушку.
+  res.status(200).type('html').send(landingPlaceholder());
+});
+
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (!sendPage(res, req.path)) next();
+});
+
+/**
  * Наружу отдаётся только public/: data/, server/ и src/ остаются недоступны.
  *
- * Кэширование. HTML, CSS и JS помечены `no-cache`: браузер каждый раз переспрашивает
- * сервер и по ETag получает пустой 304, пока файл не менялся. Это лишний короткий запрос,
- * зато исключает главную беду деплоя — старый styles.css из кэша поверх новой разметки.
- * Картинкам и прочему хватает часа: они меняются редко и вразнобой со сборкой стилей.
- *
- * Почему не «?v=<хэш>» в ссылках, как просит обычное версионирование статики:
- * модули платформы (public/js/crm/*.js) — нативные ES-модули, они импортируют друг друга
- * по относительным путям. Версию пришлось бы подставлять и внутрь самих файлов, а это
- * работа сборщика, которого в проекте намеренно нет. Ревалидация даёт тот же результат
- * без сборщика и одинаково работает и для статических страниц, и для собранных сервером.
+ * Кэширование. Файл, запрошенный с меткой версии (`?v=<хэш содержимого>`), отдаётся
+ * с годовым `immutable`: изменится файл — изменится и адрес в разметке, поэтому
+ * перепроверять нечего. Без метки или с устаревшей — прежний `no-cache`: браузер
+ * переспрашивает сервер и по ETag получает пустой 304. Так продолжают работать
+ * старые ссылки, прямые заходы и относительные импорты внутри модулей платформы,
+ * которым метку не проставить. Картинкам и шрифтам хватает часа: ссылок на них
+ * в разметке нет (они подключаются из styles.css), метку ставить некуда.
+ * Подробности и обоснование — в server/assets.js.
  */
-const REVALIDATE = new Set(['.html', '.css', '.js']);
-
 app.use(
   express.static(PUBLIC_DIR, {
     index: false,
     maxAge: '1h',
-    setHeaders(res, filePath) {
-      if (REVALIDATE.has(path.extname(filePath))) res.setHeader('Cache-Control', 'no-cache');
-    },
+    setHeaders: assets.setStaticHeaders,
   })
 );
-
-app.get('/', (req, res, next) => {
-  // sendFile идёт в обход setHeaders из express.static и без этого поставил бы
-  // «public, max-age=0». Лендинг — тот же index.html, что и в статике: ревалидация,
-  // а не кэш, иначе после деплоя браузер соберёт новую разметку со старым styles.css.
-  res.sendFile(INDEX_FILE, { headers: { 'Cache-Control': 'no-cache' } }, (error) => {
-    if (!error) return;
-    if (error.code === 'ENOENT') return res.status(200).type('html').send(landingPlaceholder());
-    next(error);
-  });
-});
 
 // Публичный API лендинга — без сессии.
 app.use('/api', require('./routes/public'));
@@ -131,7 +145,7 @@ function htmlPage({ title, heading, text, link }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} — ПроКод</title>
   <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/styles.css${assets.query('/css/styles.css')}">
 </head>
 <body class="bg-paper">
   <main class="shell flex min-h-screen flex-col items-center justify-center py-16 text-center">
@@ -207,6 +221,9 @@ app.use((error, req, res, next) => {
 async function start() {
   await models.init();
 
+  // Хэши статики и размеченные страницы считаются до первого запроса, а не в обработчике.
+  const pages = assets.preload();
+
   const server = app.listen(config.port, () => {
     const base = `http://localhost:${config.port}`;
 
@@ -218,6 +235,9 @@ async function start() {
     // Пояс печатается на старте: после деплоя на UTC-сервер это первое, что стоит проверить.
     console.log(`  Часовой пояс: ${config.timezone}`);
     console.log('  Стили:      npm run css — пересобрать CSS после правок разметки');
+    console.log(
+      `  Версии статики: метки проставлены на ${pages} стр.${assets.watchMode ? ' (режим --watch: пересчёт на каждый запрос)' : ''}`
+    );
     console.log('');
 
     config.printWarnings();

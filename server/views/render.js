@@ -18,6 +18,7 @@
 const fsp = require('fs/promises');
 const path = require('path');
 
+const assets = require('../assets');
 const access = require('../domain/access');
 const catalog = require('../domain/catalog');
 
@@ -146,18 +147,23 @@ async function renderApp({ user, module: moduleName, view, script, title, headin
     ...data,
   };
 
-  return fill(layout, {
-    TITLE: escapeHtml(title || heading || 'Платформа'),
-    HEADING: escapeHtml(heading || title || ''),
-    SUBHEADING: escapeHtml(subheading || ''),
-    NAV: navHtml(user, moduleName),
-    USER_NAME: escapeHtml(user.name || user.login),
-    USER_ROLE: escapeHtml(catalog.labelOf(catalog.ROLES, user.role)),
-    USER_INITIALS: escapeHtml(initials(user.name || user.login)),
-    CONTENT: content,
-    BOOTSTRAP: `<script nonce="${escapeHtml(nonce)}">window.PC = ${escapeJson(bootstrap)};</script>`,
-    SCRIPT: escapeHtml(script || `${pageView}.js`),
-  });
+  // Метки версий проставляются после подстановки, а не в шаблоне: к этому моменту
+  // на месте <!--{{SCRIPT}}--> уже стоит имя модуля, и ссылка на точку входа платформы
+  // размечается тем же правилом, что и styles.css, — без отдельной ветки в коде.
+  return assets.stamp(
+    fill(layout, {
+      TITLE: escapeHtml(title || heading || 'Платформа'),
+      HEADING: escapeHtml(heading || title || ''),
+      SUBHEADING: escapeHtml(subheading || ''),
+      NAV: navHtml(user, moduleName),
+      USER_NAME: escapeHtml(user.name || user.login),
+      USER_ROLE: escapeHtml(catalog.labelOf(catalog.ROLES, user.role)),
+      USER_INITIALS: escapeHtml(initials(user.name || user.login)),
+      CONTENT: content,
+      BOOTSTRAP: `<script nonce="${escapeHtml(nonce)}">window.PC = ${escapeJson(bootstrap)};</script>`,
+      SCRIPT: escapeHtml(script || `${pageView}.js`),
+    })
+  );
 }
 
 module.exports = {
