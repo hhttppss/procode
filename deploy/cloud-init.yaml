@@ -30,7 +30,7 @@ users:
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh_authorized_keys:
-      - ssh-ed25519 AAAA...ЗАМЕНИТЕ_НА_СВОЙ_ПУБЛИЧНЫЙ_КЛЮЧ deploy@prokod
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEvIw69Y7EqXKEgnfoQgzWZmaeR2K3E/KZynwx4yDLHA deploy@prokod
 
 package_update: true
 package_upgrade: true
