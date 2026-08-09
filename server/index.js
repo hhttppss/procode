@@ -15,7 +15,13 @@ const config = require('./config');
 const assets = require('./assets');
 const auth = require('./auth');
 const csp = require('./csp');
+const db = require('./db');
 const models = require('./models');
+
+// Через сколько мс после SIGTERM/SIGINT принудительно выйти, если что-то зависло
+// (недобитое соединение, зависший файловый I/O). systemd Restart=on-failure/on-abnormal
+// подхватит процесс дальше — важно не остаться висеть под старым PID.
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 const PUBLIC_DIR = path.join(config.rootDir, 'public');
 const LANDING_URL = '/index.html';
@@ -253,7 +259,53 @@ async function start() {
     throw error;
   });
 
+  setupGracefulShutdown(server);
+
   return server;
+}
+
+/**
+ * Graceful shutdown по SIGTERM (systemctl stop/restart) и SIGINT (Ctrl+C).
+ *
+ * server.close() перестаёт принимать новые соединения и ждёт завершения уже открытых
+ * запросов, после чего закрывается соединение с БД (server/db.js — WAL-чекпоинт
+ * и закрытие файла на sqlite). Без этого каждый деплой (systemctl restart) обрывал бы
+ * активные запросы и sqlite-транзакции на середине.
+ *
+ * Таймер — подстраховка на случай зависшего keep-alive соединения или файлового I/O:
+ * процесс обязан завершиться сам, а не остаться висеть под старым PID до SIGKILL.
+ */
+function setupGracefulShutdown(server) {
+  let shuttingDown = false;
+
+  function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    console.log(`\n  Получен ${signal}, завершаю работу...`);
+
+    const forceExit = setTimeout(() => {
+      console.error(`  Не удалось завершиться за ${SHUTDOWN_TIMEOUT_MS}мс — принудительный выход.`);
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+    forceExit.unref();
+
+    server.close((error) => {
+      if (error) console.error('  Ошибка при остановке HTTP-сервера:', error.message);
+
+      try {
+        db.close();
+      } catch (closeError) {
+        console.error('  Ошибка при закрытии БД:', closeError.message);
+      }
+
+      clearTimeout(forceExit);
+      process.exit(error ? 1 : 0);
+    });
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 if (require.main === module) {

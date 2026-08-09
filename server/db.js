@@ -184,7 +184,10 @@ function createJsonBackend() {
     return result;
   }
 
-  return { id: 'json', sync: false, ensure, revision, readRows, writeRows, runTransaction };
+  // Файловый движок не держит открытых хендлов между операциями — закрывать нечего.
+  function close() {}
+
+  return { id: 'json', sync: false, ensure, revision, readRows, writeRows, runTransaction, close };
 }
 
 // --------------------------------------------------------------- движок sqlite
@@ -355,7 +358,17 @@ function createSqliteBackend(file) {
     return commit();
   }
 
-  return { id: 'sqlite', sync: true, ensure, revision, readRows, writeRows, runTransaction };
+  /** Закрывает соединение (graceful shutdown). Безопасно вызывать несколько раз. */
+  function close() {
+    if (!conn) return;
+    conn.close();
+    conn = null;
+    statements.clear();
+    known.clear();
+    tableExists = null;
+  }
+
+  return { id: 'sqlite', sync: true, ensure, revision, readRows, writeRows, runTransaction, close };
 }
 
 const backend = config.databaseEngine === 'json' ? createJsonBackend() : createSqliteBackend(config.sqliteStorage);
@@ -657,6 +670,17 @@ function collectionNames() {
   return [...registry.keys()];
 }
 
+/**
+ * Закрывает соединение с хранилищем (graceful shutdown).
+ *
+ * На движке sqlite — WAL-чекпоинт и закрытие файла; на json — no-op, так как файловый
+ * движок не держит хендлы между операциями. Вызывается один раз при остановке процесса,
+ * после того как HTTP-сервер перестал принимать новые запросы (server/index.js).
+ */
+function close() {
+  backend.close();
+}
+
 // ------------------------------------------------------------- транзакции
 
 /**
@@ -888,6 +912,7 @@ module.exports = {
   collection,
   collectionOf,
   collectionNames,
+  close,
   transaction,
   createId,
   enqueue,
