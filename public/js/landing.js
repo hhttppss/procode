@@ -71,18 +71,13 @@
       [document.getElementById('main'), document.getElementById('contacts')].filter(Boolean)
     );
 
-    const header = document.getElementById('siteHeader');
     const isOpen = () => !menu.classList.contains('hidden');
 
     const setOpen = (open) => {
       menu.classList.toggle('hidden', !open);
       burger.setAttribute('aria-expanded', String(open));
       burger.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
-      // Замок прокрутки вешаем и на <html>: overflow:hidden на одном body не держит —
-      // прокручиваемым остаётся корневой элемент, и страница уезжает под меню.
-      document.documentElement.classList.toggle('overflow-hidden', open);
       document.body.classList.toggle('overflow-hidden', open);
-      if (header) header.classList.toggle('is-menu-open', open);
       isolate(open);
 
       if (open) {
