@@ -640,6 +640,14 @@
     @apply bg-paper/90 text-ink shadow-[0_1px_0_rgba(15,18,34,0.08)] backdrop-blur-md;
   }
 
+  /* Открытое мобильное меню закрашивает экран тёмным, и светлая «прокрученная» шапка
+     поверх него выглядела бы отдельной чужой плашкой. На время меню возвращаем шапке
+     прозрачный вид: правило идёт после .is-scrolled, специфичность та же — побеждает оно.
+     backdrop-filter здесь тоже гасим: он создаёт containing block для fixed-потомков. */
+  .site-header.is-menu-open {
+    @apply bg-transparent text-white shadow-none backdrop-blur-none;
+  }
+
   .nav-link {
     @apply text-sm font-medium text-current opacity-70 transition hover:opacity-100;
   }
