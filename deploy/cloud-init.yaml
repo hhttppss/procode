@@ -1,0 +1,152 @@
+#cloud-config
+# Первоначальная настройка VPS в Timeweb Cloud под проект «ПроКод»
+# (Node.js + Express, better-sqlite3, nginx как reverse proxy).
+#
+# Как использовать:
+# 1. Замените плейсхолдеры ниже: <SSH_PUBLIC_KEY>, <DEPLOY_USER> (по умолчанию deploy
+#    подходит, менять не обязательно).
+# 2. При создании сервера в Timeweb Cloud вставьте содержимое этого файла в поле
+#    «Cloud-init» (или примените после создания через «Конфигурация» —
+#    тогда потребуется `cloud-init clean --reboot`).
+# 3. После первого запуска сервер поднимет пустое приложение на 80 порту через nginx.
+#    Заявки, ученики и т.д. хранятся в /opt/procode/data — не забудьте настроить
+#    резервное копирование (см. README проекта, раздел «Резервные копии»).
+# 4. Когда домен будет указывать на сервер, выпустите сертификат вручную:
+#      sudo certbot --nginx -d ваш-домен.ru -m you@example.com --agree-tos
+#    Автоматически certbot здесь не запускается — без готового домена он упадёт
+#    и остановит выполнение остальных шагов.
+
+hostname: prokod-server
+timezone: Europe/Moscow
+
+# Создаём отдельного пользователя с sudo вместо работы под root.
+# Внимание: как только появляется хотя бы один пользователь с ssh_authorized_keys,
+# Timeweb автоматически отключает вход по паролю для root — это ожидаемо и безопасно,
+# но убедитесь, что публичный ключ ниже верный, иначе рискуете потерять доступ.
+users:
+  - default
+  - name: deploy
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAA...ЗАМЕНИТЕ_НА_СВОЙ_ПУБЛИЧНЫЙ_КЛЮЧ deploy@prokod
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - nginx
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - build-essential   # нужен для сборки нативного модуля better-sqlite3
+  - python3
+  - curl
+  - openssl
+  - certbot
+  - python3-certbot-nginx
+
+write_files:
+  # systemd-юнит для процесса Node.js
+  - path: /etc/systemd/system/procode.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=ПроКод — Node.js сервер
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=deploy
+      Group=deploy
+      WorkingDirectory=/opt/procode
+      EnvironmentFile=/opt/procode/.env
+      ExecStart=/usr/bin/node server/index.js
+      Restart=on-failure
+      RestartSec=5
+
+      NoNewPrivileges=true
+      PrivateTmp=true
+      ProtectSystem=strict
+      ProtectHome=true
+      ReadWritePaths=/opt/procode/data
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # nginx как обратный прокси перед Node.js (порт 3000 — как в .env.example)
+  - path: /etc/nginx/sites-available/procode
+    permissions: '0644'
+    content: |
+      server {
+          listen 80;
+          listen [::]:80;
+          server_name _;
+
+          location / {
+              proxy_pass http://127.0.0.1:3000;
+              proxy_http_version 1.1;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+  # ежедневная резервная копия data/ через штатный npm run backup (см. README)
+  - path: /etc/cron.d/procode-backup
+    permissions: '0644'
+    content: |
+      0 3 * * * deploy cd /opt/procode && /usr/bin/npm run backup >> /var/log/procode-backup.log 2>&1
+
+runcmd:
+  # --- Node.js 22 LTS (из package.json: engines >=20 <21 || >=22) ---
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # --- Файрвол: только SSH, HTTP, HTTPS ---
+  - ufw allow OpenSSH
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+
+  # --- fail2ban против перебора SSH ---
+  - systemctl enable --now fail2ban
+
+  # --- автоматические обновления безопасности ---
+  - dpkg-reconfigure -f noninteractive unattended-upgrades
+
+  # --- код приложения ---
+  - git clone --depth 1 -b main https://github.com/hhttppss/procode.git /opt/procode
+  - cd /opt/procode && npm install --omit=dev
+  - cd /opt/procode && npm run css
+
+  # --- .env: копируем пример и подставляем случайный секрет сессии ---
+  - cp /opt/procode/.env.example /opt/procode/.env
+  - sed -i "s#SESSION_SECRET=change-me-to-a-long-random-string#SESSION_SECRET=$(openssl rand -hex 32)#" /opt/procode/.env
+  - sed -i "s#^TRUST_PROXY=0#TRUST_PROXY=1#" /opt/procode/.env
+  - echo "Не забудьте вручную сменить ADMIN_LOGIN и ADMIN_PASSWORD в /opt/procode/.env" >> /var/log/procode-setup-notes.log
+
+  - mkdir -p /opt/procode/data
+  - chown -R deploy:deploy /opt/procode
+
+  # --- запуск приложения через systemd ---
+  - systemctl daemon-reload
+  - systemctl enable --now procode.service
+
+  # --- включаем nginx-сайт ---
+  - rm -f /etc/nginx/sites-enabled/default
+  - ln -sf /etc/nginx/sites-available/procode /etc/nginx/sites-enabled/procode
+  - nginx -t
+  - systemctl reload nginx
+
+final_message: |
+  ПроКод развёрнут за $UPTIME секунд.
+  Дальше вручную:
+  1) смените ADMIN_LOGIN/ADMIN_PASSWORD в /opt/procode/.env и перезапустите:
+     sudo systemctl restart procode
+  2) когда домен указывает на этот сервер:
+     sudo certbot --nginx -d ваш-домен.ru -m you@example.com --agree-tos
+  3) проверьте резервные копии: /var/log/procode-backup.log
