@@ -1,0 +1,11 @@
+# Устанавливается на сервере как /etc/logrotate.d/procode-monitor
+/var/log/procode-monitor.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    su procode-monitor procode-monitor
+    create 0640 procode-monitor procode-monitor
+}

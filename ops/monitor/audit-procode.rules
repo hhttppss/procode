@@ -1,0 +1,27 @@
+# Устанавливается на сервере как /etc/audit/rules.d/procode.rules
+# Слежка только за тем, что меняется редко и имеет значение для безопасности.
+# Рабочие данные (data/, backups/, node_modules/, .git/) сюда намеренно не
+# включены — иначе каждая заявка с сайта и каждый бэкап рождали бы событие.
+
+-w /opt/procode/server -p wa -k procode_code
+-w /opt/procode/scripts -p wa -k procode_code
+-w /opt/procode/package.json -p wa -k procode_code
+-w /opt/procode/package-lock.json -p wa -k procode_code
+
+-w /opt/procode/.env -p wa -k procode_secrets
+
+-w /etc/ssh/sshd_config -p wa -k ssh_config
+-w /etc/ssh/sshd_config.d -p wa -k ssh_config
+
+-w /etc/systemd/system -p wa -k systemd_config
+
+-w /etc/passwd -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/group -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+
+-w /etc/sudoers -p wa -k sudoers
+-w /etc/sudoers.d -p wa -k sudoers
+
+-w /root/.ssh -p wa -k root_keys
+-w /home/deploy/.ssh -p wa -k deploy_keys

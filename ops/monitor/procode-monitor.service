@@ -1,0 +1,18 @@
+[Unit]
+Description=ПроКод — проверка состояния сервера (память/диск/службы/SSH/OOM/аудит)
+After=network.target
+
+[Service]
+Type=oneshot
+User=procode-monitor
+Group=procode-monitor
+ExecStart=/opt/monitoring/bin/check.sh
+
+# Та же песочница, что у procode.service: монитору не нужно ничего, кроме
+# чтения журнала (группа systemd-journal, выдана отдельно) и записи в свои
+# файлы состояния и лог.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/monitoring /var/log/procode-monitor.log

@@ -1,0 +1,11 @@
+[Unit]
+Description=Запуск проверки состояния сервера ПроКод раз в минуту
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=procode-monitor.service
+
+[Install]
+WantedBy=timers.target

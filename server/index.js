@@ -51,6 +51,22 @@ app.use((req, res, next) => {
 });
 
 /**
+ * Проверка живости для внешнего аптайм-мониторинга и локального check.sh.
+ * Дешёвый настоящий запрос к БД (а не просто "процесс жив"): если файл базы
+ * повреждён или залочен, это должно превратить /healthz в 503, а не в ложный ok.
+ * Стоит до compression/static — ответ не должен зависеть от остального пайплайна.
+ */
+app.get('/healthz', (req, res) => {
+  models.users
+    .isEmpty()
+    .then(() => res.status(200).type('text/plain').send('ok'))
+    .catch((error) => {
+      console.error('Healthcheck: БД недоступна:', error.message);
+      res.status(503).type('text/plain').send('db error');
+    });
+});
+
+/**
  * Сжатие ответов. Стоит до статики и до маршрутов: самое тяжёлое здесь — styles.css
  * и HTML лендинга, а они отдаются ниже.
  * За nginx этот слой лучше выключить и сжимать на прокси — см. README.
